@@ -99,7 +99,7 @@ export class CodesService {
     return result.codes;
   }
 
-  public async enableCodes(
+  public async enableNotifications(
     guildId: Snowflake,
     channel: Snowflake,
     role?: Snowflake,
@@ -109,5 +109,9 @@ export class CodesService {
       channel,
       role,
     });
+  }
+
+  public async disableNotifications(guildId: Snowflake) {
+    await this.#disableCodes.execute({ guildId });
   }
 }

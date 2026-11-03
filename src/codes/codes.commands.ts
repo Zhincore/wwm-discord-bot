@@ -22,7 +22,7 @@ export class CodesCommands {
 
   @Subcommand({
     name: 'enable',
-    description: 'Enable exchange codes notifications',
+    description: 'Enable or change exchange codes notifications',
   })
   public enable(
     @Context() [interaction]: SlashCommandContext,
@@ -35,10 +35,30 @@ export class CodesCommands {
       });
     }
 
-    this.service.enableCodes(interaction.guildId, channel.id, role?.id);
+    this.service.enableNotifications(interaction.guildId, channel.id, role?.id);
 
     return interaction.reply({
       content: `New codes notifications will be sent to ${channel} with ${role?.name || 'no'} role pinged.`,
+      flags: ['Ephemeral'],
+    });
+  }
+
+  @Subcommand({
+    name: 'disable',
+    description: 'Disable exchange codes notifications',
+  })
+  public disable(@Context() [interaction]: SlashCommandContext) {
+    if (!interaction.inGuild()) {
+      return interaction.reply({
+        content: `This is a guild-only command.`,
+        flags: ['Ephemeral'],
+      });
+    }
+
+    this.service.disableNotifications(interaction.guildId);
+
+    return interaction.reply({
+      content: `New codes notifications disabled.`,
       flags: ['Ephemeral'],
     });
   }
