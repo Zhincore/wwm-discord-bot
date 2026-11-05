@@ -1,14 +1,12 @@
+import { fetchJSON } from '#common/utils.js';
+
 import { CodesSource } from './source.js';
 
 export const CODES_API_URL =
   'https://codes-backend.wwmcodes.workers.dev/v1/codes';
 
 export const fetchYarCodes: CodesSource = async (lastCursor) => {
-  const response = await fetch(CODES_API_URL);
-  if (!response.ok)
-    throw new Error(`Yar codes API returned ${response.status}`);
-
-  const data: CodesResponse = await response.json();
+  const data = await fetchJSON<CodesResponse>(CODES_API_URL);
 
   const codes = data.active.filter((c) => c.verifiedAt);
   const latestCursor = codes[0].addedAt;

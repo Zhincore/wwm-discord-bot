@@ -1,0 +1,149 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "56f1b171-1d54-436b-a42a-874e529d19ba",
+  "prevIds": [
+    "af932c01-5884-4605-b0d3-6ae318a194d3"
+  ],
+  "ddl": [
+    {
+      "name": "codes",
+      "entityType": "tables"
+    },
+    {
+      "name": "app_state",
+      "entityType": "tables"
+    },
+    {
+      "name": "game_profiles",
+      "entityType": "tables"
+    },
+    {
+      "table": "codes",
+      "name": "guildId",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "codes",
+      "name": "channel",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "codes",
+      "name": "pingRole",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "app_state",
+      "name": "key",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "app_state",
+      "name": "value",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "game_profiles",
+      "name": "id",
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "game_profiles",
+      "name": "memberId",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "game_profiles",
+      "name": "session",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "game_profiles",
+      "name": "createdAt",
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": "(CURRENT_TIMESTAMP)",
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "codes",
+      "name": "codes_pk",
+      "columns": [
+        "guildId"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "table": "app_state",
+      "name": "app_state_pk",
+      "columns": [
+        "key"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "table": "game_profiles",
+      "name": "game_profiles_pk",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "table": "game_profiles",
+      "name": "game_profiles_memberId_unique",
+      "columns": [
+        "memberId"
+      ],
+      "nameExplicit": false,
+      "entityType": "uniques"
+    }
+  ],
+  "renames": []
+}

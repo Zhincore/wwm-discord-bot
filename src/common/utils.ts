@@ -48,5 +48,13 @@ export function deepMerge(
   return deepMerge(target, ...sources);
 }
 
-/** NO-OP marker for SQL string */
-export const sql = String.raw;
+export async function fetchJSON<T>(
+  input: string | URL | Request,
+  init?: BunFetchRequestInit,
+) {
+  const response = await fetch(input, init);
+  if (!response.ok)
+    throw new Error(`${response.status} ${response.statusText} -- (${input})`);
+
+  return response.json() as Promise<T>;
+}

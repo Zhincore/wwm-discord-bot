@@ -7,6 +7,9 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { CodesModule } from './codes/codes.module.js';
 import { CommonModule } from './common/common.module.js';
+import { GameProfileModule } from './game-profile/game-profile.module.js';
+
+const devGuild = process.env.DISCORD_DEVELOPMENT_GUILD_ID;
 
 @Module({
   imports: [
@@ -15,12 +18,13 @@ import { CommonModule } from './common/common.module.js';
     NecordModule.forRoot({
       token: process.env.DISCORD_TOKEN!,
       intents: [IntentsBitField.Flags.Guilds],
-      development: [process.env.DISCORD_DEVELOPMENT_GUILD_ID!],
+      development: devGuild ? [devGuild] : undefined,
     }),
 
     // Internal
     CommonModule,
     CodesModule,
+    GameProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
