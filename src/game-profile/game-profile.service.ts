@@ -7,14 +7,21 @@ import ms from 'ms';
 
 import { DatabaseService } from '#common/database/database.service.js';
 import { FetchCache } from '#common/fetch-cache.js';
-
 import {
   fetchAuthConfig,
   fetchRoleInfo,
   fetchRoleList,
   getLoginMethods,
   loginRole,
-} from './easebar-auth';
+} from '#wwm/easebar-auth.client.js';
+import {
+  WwmSect,
+  WwmBanner,
+  WwmEleganceLevel,
+  WwmMartialArt,
+} from '#wwm/game-data.client.js';
+import { GameDataService } from '#wwm/game-data.service.js';
+
 import { gameProfiles } from './game-profile.schema';
 
 @Injectable()
@@ -30,7 +37,10 @@ export class GameProfileService {
   #setProfileToken;
   #deleteOldAttempts;
 
-  constructor(db: DatabaseService) {
+  constructor(
+    db: DatabaseService,
+    private readonly gameData: GameDataService,
+  ) {
     const id = sql.placeholder('id');
     const memberId = sql.placeholder('memberId');
     const token = sql.placeholder('token');
@@ -121,10 +131,69 @@ export class GameProfileService {
     });
   }
 
-  public async getProfile(memberId: Snowflake) {
+  private async fetchProfile(memberId: Snowflake) {
     const result = this.#getMemberProfile.get({ memberId });
-    if (!result?.session) return;
+    if (
+      !result?.session ||
+      (result.expiresAt && +result.expiresAt < Date.now())
+    )
+      return;
 
     return fetchRoleInfo(result.session);
   }
+
+  public async getResolvedProfile(memberId: Snowflake) {
+    const data = await this.fetchProfile(memberId);
+    if (!data) return;
+
+    const avatar = this.gameData.get('avatar', +data.roleAvatar);
+    const sect = this.gameData.get('sect', data.school);
+    const banner = this.gameData.get('banner', data.bg);
+    const eleganceLevel = this.gameData.getElegance(data.fashionScore);
+
+    // const mainMartialArt = this.gameData.get('martialArt', data.kongfuMain);
+    // const subMartialArt = this.gameData.get('martialArt', data.kongfuSub);
+    const [mainMartialArt, subMartialArt] = this.gameData.getMultiple(
+      'martialArt',
+      [data.kongfuMain, data.kongfuSub],
+    );
+
+    // const mainAffix = this.gameData.get("affix", data.wearEquipsDetailed[])
+
+    return {
+      uid: data.roleId,
+      name: data.roleName,
+      avatarUrl: avatar?.pic_url,
+      bodyType: data.bodyType,
+      level: data.level,
+      createdDays: data.crDay,
+      onlineTimeMs: data.onlineTime * 1000,
+      sect,
+      banner,
+      maxMartialMastery: data.maxXiuWeiKungFu,
+      martialMastery: data.xiuWeiKungFu,
+      eleganceScore: data.fashionScore,
+      eleganceLevel,
+      mainMartialArt,
+      subMartialArt,
+    } as ResolvedProfile;
+  }
+}
+
+interface ResolvedProfile {
+  uid: string;
+  name: string;
+  avatarUrl?: string;
+  bodyType: 0 | 1;
+  level: number;
+  createdDays: number;
+  onlineTimeMs: number;
+  sect?: WwmSect;
+  banner?: WwmBanner;
+  maxMartialMastery: number;
+  martialMastery: number;
+  eleganceScore: number;
+  eleganceLevel: WwmEleganceLevel;
+  mainMartialArt?: WwmMartialArt;
+  subMartialArt?: WwmMartialArt;
 }

@@ -3,10 +3,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ComponentData,
   EmbedBuilder,
   InteractionContextType,
-  MessageActionRowComponentData,
   TextDisplayBuilder,
   User,
 } from 'discord.js';
@@ -20,7 +18,12 @@ import {
   type UserCommandContext,
 } from 'necord';
 
+import { WwmMartialArt } from '#wwm/game-data.client.js';
+import { GameEmojisService } from '#wwm/game-emojis.service.js';
+
 import { GameProfileService } from './game-profile.service';
+
+const HOUR = 1000 * 60 * 60;
 
 @SlashCommand({
   name: 'wwm-stats',
@@ -29,7 +32,10 @@ import { GameProfileService } from './game-profile.service';
 })
 @Injectable()
 export class GameProfileCommands {
-  constructor(private readonly service: GameProfileService) {}
+  constructor(
+    private readonly service: GameProfileService,
+    private readonly emoji: GameEmojisService,
+  ) {}
 
   @UserCommand({
     name: 'Show WWM stats',
@@ -38,16 +44,57 @@ export class GameProfileCommands {
     @Context() [interaction]: UserCommandContext,
     @TargetUser() user: User,
   ) {
-    const profile = await this.service.getProfile(user.id);
+    const profile = await this.service.getResolvedProfile(user.id);
+    if (!profile) {
+      return interaction.reply({
+        content: `${user} doesn't have linked WWM stats or the session expired.`,
+        allowedMentions: { parse: [] },
+      });
+    }
 
-    await interaction.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(
-            `${user.username}'s' ${profile?.roleName} ${profile?.bodyType}`,
-          )
-          .setImage(user.displayAvatarURL({ size: 4096 })),
-      ],
+    const getMartialArt = (art?: WwmMartialArt) => {
+      if (!art) return '-';
+      const pathEmoji =
+        (art.liupai_pic_url && this.emoji.getPathEmoji(art.liupai_pic_url)) ||
+        '🛡️';
+      const artEmoji = this.emoji.getMartialArtEmoji(art) || '🛡️';
+      return `${pathEmoji} | ${artEmoji} ${art.name ?? '???'}`;
+    };
+
+    const inline = true;
+    const embed = new EmbedBuilder()
+      .setColor('Gold')
+      .setAuthor({
+        name: `${user.displayName}`,
+        iconURL: user.avatarURL({ size: 256 }) || undefined,
+      })
+      .setTitle(`${profile.name} [lvl. ${profile.level}]`)
+      .setFields([
+        {
+          name: 'Playtime',
+          value: `${Math.round(profile.onlineTimeMs / HOUR).toLocaleString()} (${profile.createdDays} d)`,
+          inline,
+        },
+        {
+          name: 'Martial Mastery',
+          value: `${profile.maxMartialMastery.toLocaleString()}`,
+          inline,
+        },
+        {
+          name: 'Elegance',
+          value: `*${profile.eleganceLevel.name}* [${profile.eleganceScore.toLocaleString()}]`,
+          inline,
+        },
+        {
+          name: 'Weapons',
+          value: `${getMartialArt(profile.mainMartialArt)}\n${getMartialArt(profile.subMartialArt)}`,
+        },
+      ]);
+    if (profile.avatarUrl) embed.setThumbnail(profile.avatarUrl);
+
+    return interaction.reply({
+      embeds: [embed],
+      allowedMentions: { parse: [] },
     });
   }
 
@@ -61,10 +108,11 @@ export class GameProfileCommands {
     );
 
     return interaction.reply({
-      flags: ['IsComponentsV2'],
+      flags: ['IsComponentsV2', 'Ephemeral'],
       components: [
         new TextDisplayBuilder().setContent(
-          'To link your WWM character, pick your login method:',
+          'To link your WWM character, pick your login method:' +
+            '\n-# Note that these link are specific to you, DO NOT share them.',
         ),
         ...methods
           .reduce(

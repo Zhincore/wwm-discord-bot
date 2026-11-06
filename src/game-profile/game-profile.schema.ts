@@ -9,4 +9,5 @@ export const gameProfiles = sqliteTable('game_profiles', {
   memberId: snowflake().unique(),
   session: t.text(),
   createdAt: t.integer({ mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
+  expiresAt: t.integer({ mode: 'timestamp' }),
 });

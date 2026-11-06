@@ -1,6 +1,6 @@
 import { Layout } from "#common/views/Layout.js";
-import { RoleInfo } from "#game-profile/easebar-auth.js";
-import safeCss from "./link.css" with { type: "text" };
+import { RoleInfo } from "#wwm/game-profile.js";
+import safeCss from "./Link.css" with { type: "text" };
 
 interface RoleProps {
   roles: RoleInfo[];

@@ -1,3 +1,5 @@
+import { Client } from 'discord.js';
+
 type DeepMerge<T, U> = [T, U] extends [Record<string, any>, Record<string, any>]
   ? {
       [K in keyof T | keyof U]: K extends keyof U
@@ -57,4 +59,16 @@ export async function fetchJSON<T>(
     throw new Error(`${response.status} ${response.statusText} -- (${input})`);
 
   return response.json() as Promise<T>;
+}
+
+export async function onceReady(client: Client) {
+  if (client.isReady()) return client;
+
+  return await new Promise<Client<true>>((resolve, reject) => {
+    client.once('error', reject);
+    client.once('clientReady', (c) => {
+      client.off('error', reject);
+      resolve(c);
+    });
+  });
 }

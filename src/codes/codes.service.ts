@@ -10,6 +10,7 @@ import { fetchYarCodes } from './sources/yar.js';
 
 @Injectable()
 export class CodesService {
+  private readonly logger = new Logger(CodesService.name);
   // TODO: Lock
   private fetching = false;
 
@@ -20,7 +21,6 @@ export class CodesService {
 
   constructor(
     db: DatabaseService,
-    private readonly logger: Logger,
     private readonly store: KvStore<{ lastCursor?: string }>,
   ) {
     const guildId = sql.placeholder('guildId');

@@ -21,6 +21,7 @@ export abstract class DatabaseService extends SQLiteBunDatabase {
 
     const db = drizzle({
       client: new Database(Path.join(DATA_DIR, 'db.sqlite')),
+      jit: true,
     });
 
     migrate(db, { migrationsFolder: 'drizzle' });

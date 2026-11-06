@@ -1,6 +1,6 @@
 import { Layout } from "#common/views/Layout.js";
-import { LoginMethod } from "#game-profile/easebar-auth.js";
-import safeCss from "./link.css" with { type: "text" };
+import { LoginMethod } from "#wwm/easebar-auth.client.js";
+import safeCss from "./Link.css" with { type: "text" };
 
 interface LinkProps {
   methods: LoginMethod[];

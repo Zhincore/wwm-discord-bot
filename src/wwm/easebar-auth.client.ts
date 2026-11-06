@@ -1,5 +1,7 @@
 import { fetchJSON } from '#common/utils.js';
 
+import { RoleDetails, RoleInfo } from './game-profile';
+
 const LOGIN_BASE_URL = 'https://sdk-os.mpsdk.easebar.com/api/users/login/v2';
 const LOGIN_BASE_PARAMS =
   'game_id=398&cp=w&cv=3.1.5&gv=1.0.0&app_channel=netease_global.h5activity&device_id=2251945601';
@@ -33,12 +35,8 @@ export function getLoginMethods(
   }));
 }
 
-function parseToken(token: string): TokenData {
-  return JSON.parse(Buffer.from(token, 'base64url').toString());
-}
-
 export async function fetchRoleList(platform: string, token: string) {
-  const tokenData = parseToken(token);
+  const tokenData = parseToken<TokenData>(token);
 
   const result = await fetchSAuth<RoleListResponse>(
     '/login/roleList',
@@ -57,7 +55,7 @@ export async function loginRole(
   token: string,
   roleId: string,
 ) {
-  const tokenData = parseToken(token);
+  const tokenData = parseToken<TokenData>(token);
 
   const result = await fetchSAuth<RoleLoginResponse>(
     '/login/roleLogin',
@@ -69,7 +67,7 @@ export async function loginRole(
     throw new Error(`Logging in role failed: ${result.msg}`);
   }
 
-  return result.data;
+  return { ...result.data, ...parseJwt(result.data.token) };
 }
 
 export async function fetchRoleInfo(accessToken: string) {
@@ -113,10 +111,26 @@ async function fetchSAuth<T>(
   });
 }
 
+function parseToken<T>(token: string): T {
+  return JSON.parse(Buffer.from(token, 'base64url').toString());
+}
+
+function parseJwt(jwt: string): JwtData {
+  return parseToken(jwt.split('.')[1]);
+}
+
 interface TokenData {
   user_id: number;
   access_token: string;
   device_id: string;
+}
+
+interface JwtData {
+  /** JSON with nickName and uid etc. */
+  sub: string;
+  iat: number;
+  exp: number;
+  iss: string;
 }
 
 interface SAuthResponseBase {
@@ -149,12 +163,5 @@ interface RoleLoginResponse extends SAuthResponseBase {
 }
 
 interface RoleInfoResult extends SAuthResponseBase {
-  data: RoleInfo;
-}
-
-export interface RoleInfo {
-  roleId: string;
-  roleName: string;
-  roleAvatar: string | null;
-  bodyType: number | null;
+  data: RoleDetails;
 }
