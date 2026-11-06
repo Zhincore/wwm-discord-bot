@@ -1,12 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
-import {
-  ChannelManager,
-  ChannelType,
-  Client,
-  EmbedBuilder,
-  Snowflake,
-} from 'discord.js';
+import { Injectable, Logger } from '@nestjs/common';
+import { Snowflake } from 'discord.js';
 import { eq, sql } from 'drizzle-orm';
 
 import { DatabaseService } from '#common/database/database.service.js';
@@ -21,20 +14,25 @@ export class CodesService {
   private fetching = false;
 
   #iterateGuilds;
+  #getGuild;
   #enableCodes;
   #disableCodes;
 
   constructor(
     db: DatabaseService,
+    private readonly logger: Logger,
     private readonly store: KvStore<{ lastCursor?: string }>,
-    private readonly discord: Client,
-    private readonly channels: ChannelManager,
   ) {
     const guildId = sql.placeholder('guildId');
     const channel = sql.placeholder('channel');
     const role = sql.placeholder('role');
 
     this.#iterateGuilds = db.select().from(guildCodesTable).prepare();
+    this.#getGuild = db
+      .select()
+      .from(guildCodesTable)
+      .where(eq(guildCodesTable.guildId, guildId))
+      .prepare();
     this.#enableCodes = db
       .insert(guildCodesTable)
       .values({ guildId, channel, pingRole: role })
@@ -49,69 +47,43 @@ export class CodesService {
       .prepare();
   }
 
-  @Cron('0 */30 9-23 * * *')
-  async checkCodes() {
-    const codes = await this.fetchCodes();
-
-    if (!codes.length) return;
-
-    for (const guild of this.#iterateGuilds.all()) {
-      const channel = await this.channels.fetch(guild.channel);
-      if (!channel?.isSendable() || channel.type !== ChannelType.GuildText)
-        continue;
-
-      const role = guild.pingRole
-        ? await channel.guild.roles.fetch(guild.pingRole)
-        : null;
-
-      const codesLimited = codes.slice(0, 16);
-      const codesMore = codes.length - codesLimited.length;
-
-      await channel.send({
-        content: 'New exchange codes!' + (role ? ` ${role}` : ''),
-        embeds: [
-          new EmbedBuilder()
-            .setColor('Green')
-            .setTitle('New exchange codes')
-            .setDescription(
-              codesLimited.map((c) => `\`${c}\``).join('\n') +
-                (codesMore
-                  ? `\n\n[And ${codesMore} more...](https://codes.yar.gg/)`
-                  : ''),
-            )
-            .setFields({
-              name: 'Source',
-              value: '[codes.yar.gg](https://codes.yar.gg/)',
-              inline: true,
-            }),
-        ],
-      });
-    }
-  }
-
-  private async fetchCodes(): Promise<string[]> {
+  public async fetchCodes(): Promise<string[]> {
+    this.logger.log('Fetching codes...');
     const lastCursor = this.store.get('lastCursor');
 
     const result = await fetchYarCodes(lastCursor);
 
     this.store.set('lastCursor', result.latestCursor);
 
+    this.logger.log(
+      `Fetching codes done, found ${result.codes.length} new codes.`,
+    );
     return result.codes;
   }
 
-  public async enableNotifications(
+  public getGuilds() {
+    return this.#iterateGuilds.all();
+  }
+
+  public getGuildSettings(guildId: Snowflake) {
+    return this.#getGuild.get({ guildId });
+  }
+
+  public enableNotifications(
     guildId: Snowflake,
     channel: Snowflake,
     role?: Snowflake,
   ) {
-    await this.#enableCodes.execute({
-      guildId,
-      channel,
-      role,
-    });
+    this.#enableCodes
+      .execute({
+        guildId,
+        channel,
+        role,
+      })
+      .sync();
   }
 
-  public async disableNotifications(guildId: Snowflake) {
-    await this.#disableCodes.execute({ guildId });
+  public disableNotifications(guildId: Snowflake) {
+    this.#disableCodes.execute({ guildId }).sync();
   }
 }
