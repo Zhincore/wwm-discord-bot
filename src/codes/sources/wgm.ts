@@ -11,16 +11,14 @@ export const fetchWGMCodes: CodesSource = async (lastCursor) => {
   const data: CodesResponse = await response.json();
 
   const codes = data.codes.filter((c) => c.reviewStatus == 'approved');
-  const latestCursor = codes[0].createdAt;
+  const latestCursor = codes[0]?.createdAt ?? lastCursor ?? '';
 
   if (!lastCursor) return { latestCursor, codes: [] };
 
-  const newCodes = [];
-  for (const code of codes) {
-    if (code.createdAt == lastCursor) break;
-    newCodes.push(code.code);
-  }
-  return { latestCursor, codes: newCodes };
+  return {
+    latestCursor,
+    codes: codes.filter((c) => c.createdAt > lastCursor).map((c) => c.code),
+  };
 };
 
 interface CodeEntry {

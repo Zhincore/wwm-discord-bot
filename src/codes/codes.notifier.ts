@@ -11,7 +11,7 @@ export class CodesNotifier {
     private readonly channels: ChannelManager,
   ) {}
 
-  @Cron('0 */30 9-23 * *')
+  @Cron('0 */30 9-23 * * *')
   async checkCodes() {
     const codes = await this.service.fetchCodes();
 

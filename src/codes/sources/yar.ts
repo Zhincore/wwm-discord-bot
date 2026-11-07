@@ -9,16 +9,14 @@ export const fetchYarCodes: CodesSource = async (lastCursor) => {
   const data = await fetchJSON<CodesResponse>(CODES_API_URL);
 
   const codes = data.active.filter((c) => c.verifiedAt);
-  const latestCursor = codes[0].addedAt;
+  const latestCursor = codes[0]?.addedAt ?? lastCursor ?? '';
 
   if (!lastCursor) return { latestCursor, codes: [] };
 
-  const newCodes = [];
-  for (const code of codes) {
-    if (code.addedAt == lastCursor) break;
-    newCodes.push(code.code);
-  }
-  return { latestCursor, codes: newCodes };
+  return {
+    latestCursor,
+    codes: codes.filter((c) => c.addedAt > lastCursor).map((c) => c.code),
+  };
 };
 
 interface CodeEntry {
