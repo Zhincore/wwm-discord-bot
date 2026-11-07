@@ -1,11 +1,25 @@
 import { Layout } from "#common/views/Layout.js";
-import safeRedirectJS from "./callback-redirect.js?raw" with { type: "text" };
+
+const window = null as any;
+
+function redirectJs() {
+  const hashValue = window.location.hash.substring(1);
+  const params = new URLSearchParams(hashValue);
+
+  const url = new URL(window.location);
+  url.pathname = url.pathname.replace(/callback$/, "role");
+  for (const [key, value] of params) {
+    url.searchParams.set(key, value);
+  }
+
+  window.location.replace(url);
+}
 
 export function Callback() {
   return (
     <Layout
       title="Please wait..."
-      head={<script>{safeRedirectJS}</script>}
+      head={<script>{redirectJs.toString()}</script>}
     ></Layout>
   );
 }
