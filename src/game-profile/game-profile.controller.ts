@@ -9,9 +9,10 @@ import {
 } from '@nestjs/common';
 
 import { GameProfileService } from './game-profile.service';
-import callbackRedirect from './views/callback-redirect.html' with { type: 'text' };
+import { Callback } from './views/Callback';
 import { Link } from './views/Link';
 import { RoleChooser } from './views/RoleChooser';
+import { Success } from './views/Success';
 
 @Controller('game-profile')
 export class GameProfileController {
@@ -27,7 +28,7 @@ export class GameProfileController {
   @Get(':userId/callback')
   @Header('Content-Type', 'text/html')
   public async callback(@Param('userId') _userId: string) {
-    return callbackRedirect;
+    return Callback();
   }
 
   @Get(':userId/role')
@@ -50,8 +51,13 @@ export class GameProfileController {
     @Query('token') token: string,
     @Body('roleId') roleId: string,
   ) {
-    const roles = await this.service.loginRole(userId, platform, token, roleId);
+    const nickname = await this.service.loginRole(
+      userId,
+      platform,
+      token,
+      roleId,
+    );
 
-    return 'success';
+    return Success({ nickname });
   }
 }

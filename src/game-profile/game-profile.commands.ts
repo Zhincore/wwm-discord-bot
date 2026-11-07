@@ -3,17 +3,21 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelManager,
+  CommandInteraction,
   EmbedBuilder,
+  GuildMember,
   InteractionContextType,
+  Snowflake,
   TextDisplayBuilder,
-  User,
 } from 'discord.js';
 import {
   Context,
+  Options,
   SlashCommand,
   type SlashCommandContext,
   Subcommand,
-  TargetUser,
+  TargetMember,
   UserCommand,
   type UserCommandContext,
 } from 'necord';
@@ -21,6 +25,7 @@ import {
 import { WwmMartialArt } from '#wwm/game-data.client.js';
 import { GameEmojisService } from '#wwm/game-emojis.service.js';
 
+import { ShowProfileDto } from './dto/show-profile.dto';
 import { GameProfileService } from './game-profile.service';
 
 const HOUR = 1000 * 60 * 60;
@@ -35,22 +40,119 @@ export class GameProfileCommands {
   constructor(
     private readonly service: GameProfileService,
     private readonly emoji: GameEmojisService,
-  ) {}
+    private readonly channels: ChannelManager,
+  ) {
+    service.on('profileLinked', (nickname, linkMessageId) => {
+      if (linkMessageId) return this.updateLinkMessage(nickname, linkMessageId);
+    });
+  }
 
   @UserCommand({
     name: 'Show WWM stats',
   })
   public async view(
     @Context() [interaction]: UserCommandContext,
-    @TargetUser() user: User,
+    @TargetMember() member: GuildMember,
   ) {
-    const profile = await this.service.getResolvedProfile(user.id);
+    return this.replyProfile(interaction, member);
+  }
+
+  @Subcommand({
+    name: 'show',
+    description: "Show your or someone's WWM profile.",
+  })
+  public async show(
+    @Context() [interaction]: SlashCommandContext,
+    @Options() { of }: ShowProfileDto,
+  ) {
+    if (!interaction.inCachedGuild()) return;
+    const member = of ?? interaction.member;
+    if (!member) return;
+    return this.replyProfile(interaction, member);
+  }
+
+  @Subcommand({
+    name: 'link',
+    description: 'Link your in-game WWM character to the bot',
+  })
+  public async link(@Context() [interaction]: SlashCommandContext) {
+    const methods = await this.service.getLoginMethodsDiscord(
+      interaction.user.id,
+    );
+
+    const response = await interaction.reply({
+      flags: ['IsComponentsV2', 'Ephemeral'],
+      components: [
+        new TextDisplayBuilder().setContent(
+          'To (re)link your WWM character, pick your login method:' +
+            '\n-# Note that these link are specific to you, DO NOT share them.',
+        ),
+        ...methods
+          .reduce(
+            (acc, m) => {
+              let arr = acc[acc.length - 1];
+              if (arr.length == 5) {
+                arr = [];
+                acc.push(arr);
+              }
+              arr.push(
+                new ButtonBuilder()
+                  .setStyle(ButtonStyle.Link)
+                  .setLabel(m.name)
+                  .setURL(m.url),
+              );
+              return acc;
+            },
+            [[]] as ButtonBuilder[][],
+          )
+          .map((c) => new ActionRowBuilder<ButtonBuilder>().setComponents(c)),
+      ],
+    });
+
+    const messageId = interaction.channelId + ':' + response.id;
+    this.service.setLinkMessage(interaction.user.id, messageId);
+
+    return response;
+  }
+
+  private async updateLinkMessage(nickname: string, linkMessage: Snowflake) {
+    const [channelId, messageId] = linkMessage.split(':');
+
+    const channel = await this.channels.fetch(channelId);
+    if (!channel?.isTextBased()) return;
+
+    return await channel.messages
+      .edit(messageId, {
+        components: [
+          new TextDisplayBuilder().setContent(
+            `Successfuly linked character ${nickname} to your Discord!`,
+          ),
+        ],
+      })
+      .catch(() => null);
+  }
+
+  private async replyProfile(
+    interaction: CommandInteraction,
+    member: GuildMember,
+  ) {
+    const profile = await this.renderProfile(member);
     if (!profile) {
       return interaction.reply({
-        content: `${user} doesn't have linked WWM stats or the session expired.`,
+        content: `${member} doesn't have linked WWM stats or the session expired.`,
         allowedMentions: { parse: [] },
       });
     }
+
+    return interaction.reply({
+      embeds: [profile],
+      allowedMentions: { parse: [] },
+    });
+  }
+
+  private async renderProfile(member: GuildMember) {
+    const profile = await this.service.getResolvedProfile(member.user.id);
+    if (!profile) return;
 
     const getMartialArt = (art?: WwmMartialArt) => {
       if (!art) return '-';
@@ -65,8 +167,8 @@ export class GameProfileCommands {
     const embed = new EmbedBuilder()
       .setColor('Gold')
       .setAuthor({
-        name: `${user.displayName}`,
-        iconURL: user.avatarURL({ size: 256 }) || undefined,
+        name: `${member.nickname || member.displayName}`,
+        iconURL: member.displayAvatarURL({ size: 128 }),
       })
       .setTitle(`${profile.name} [lvl. ${profile.level}]`)
       .setFields([
@@ -92,48 +194,6 @@ export class GameProfileCommands {
       ]);
     if (profile.avatarUrl) embed.setThumbnail(profile.avatarUrl);
 
-    return interaction.reply({
-      embeds: [embed],
-      allowedMentions: { parse: [] },
-    });
-  }
-
-  @Subcommand({
-    name: 'link',
-    description: 'Link your in-game WWM character to the bot',
-  })
-  public async link(@Context() [interaction]: SlashCommandContext) {
-    const methods = await this.service.getLoginMethodsDiscord(
-      interaction.user.id,
-    );
-
-    return interaction.reply({
-      flags: ['IsComponentsV2', 'Ephemeral'],
-      components: [
-        new TextDisplayBuilder().setContent(
-          'To link your WWM character, pick your login method:' +
-            '\n-# Note that these link are specific to you, DO NOT share them.',
-        ),
-        ...methods
-          .reduce(
-            (acc, m) => {
-              let arr = acc[acc.length - 1];
-              if (arr.length == 5) {
-                arr = [];
-                acc.push(arr);
-              }
-              arr.push(
-                new ButtonBuilder()
-                  .setStyle(ButtonStyle.Link)
-                  .setLabel(m.name)
-                  .setURL(m.url),
-              );
-              return acc;
-            },
-            [[]] as ButtonBuilder[][],
-          )
-          .map((c) => new ActionRowBuilder<ButtonBuilder>().setComponents(c)),
-      ],
-    });
+    return embed;
   }
 }

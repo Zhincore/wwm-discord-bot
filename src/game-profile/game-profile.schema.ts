@@ -8,6 +8,7 @@ export const gameProfiles = sqliteTable('game_profiles', {
   id: t.integer().primaryKey({ autoIncrement: true }),
   memberId: snowflake().unique(),
   session: t.text(),
+  linkMessage: snowflake(),
   createdAt: t.integer({ mode: 'timestamp' }).default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: t.integer({ mode: 'timestamp' }),
 });

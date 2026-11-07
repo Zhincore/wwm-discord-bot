@@ -25,7 +25,7 @@ interface GameDataServiceEvents {
 @Injectable()
 export class GameDataService implements OnApplicationBootstrap {
   private readonly logger = new Logger(GameDataService.name);
-  private readonly events = new EventEmitter<GameDataServiceEvents>();
+  readonly #events = new EventEmitter<GameDataServiceEvents>();
 
   #getItem;
   #getItems;
@@ -68,9 +68,9 @@ export class GameDataService implements OnApplicationBootstrap {
       .prepare();
   }
 
-  public readonly on = this.events.on.bind(this.events);
-  public readonly once = this.events.once.bind(this.events);
-  public readonly off = this.events.off.bind(this.events);
+  public readonly on = this.#events.on.bind(this.#events);
+  public readonly once = this.#events.once.bind(this.#events);
+  public readonly off = this.#events.off.bind(this.#events);
 
   async onApplicationBootstrap() {
     if (this.db.$count(gameData).sync() === 0) await this.refresh();
@@ -109,7 +109,7 @@ export class GameDataService implements OnApplicationBootstrap {
     this.updateDataKind('affix', affixes);
 
     this.logger.log('Refetching done.');
-    this.events.emit('dataUpdated');
+    this.#events.emit('dataUpdated');
   }
 
   list<K extends DataKind>(kind: K) {

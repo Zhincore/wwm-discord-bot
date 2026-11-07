@@ -1,3 +1,5 @@
+import EventEmitter from 'node:events';
+
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Snowflake } from 'discord.js';
@@ -24,8 +26,14 @@ import { GameDataService } from '#wwm/game-data.service.js';
 
 import { gameProfiles } from './game-profile.schema';
 
+interface GameProfileServiceEvents {
+  profileLinked: [nickname: string, linkMessage: Snowflake | null];
+}
+
 @Injectable()
 export class GameProfileService {
+  readonly #events = new EventEmitter<GameProfileServiceEvents>();
+
   #hashids = new Hashids(process.env.SALT, 8);
   #authConfigs = new FetchCache((lang: string) => fetchAuthConfig(lang), {
     ttl: ms('12h'),
@@ -35,6 +43,7 @@ export class GameProfileService {
   #createMemberProfile;
   #getMemberProfile;
   #setProfileToken;
+  #setLinkMessage;
   #deleteOldAttempts;
 
   constructor(
@@ -44,6 +53,7 @@ export class GameProfileService {
     const id = sql.placeholder('id');
     const memberId = sql.placeholder('memberId');
     const token = sql.placeholder('token');
+    const linkMessage = sql.placeholder('linkMessage');
 
     this.#createEmptyProfile = db
       .insert(gameProfiles)
@@ -66,6 +76,12 @@ export class GameProfileService {
       .update(gameProfiles)
       .set({ session: token })
       .where(eq(gameProfiles.id, id))
+      .returning({ linkMessage: gameProfiles.linkMessage })
+      .prepare();
+    this.#setLinkMessage = db
+      .update(gameProfiles)
+      .set({ linkMessage })
+      .where(eq(gameProfiles.memberId, memberId))
       .prepare();
 
     this.#deleteOldAttempts = db
@@ -78,6 +94,10 @@ export class GameProfileService {
       )
       .prepare();
   }
+
+  public readonly on = this.#events.on.bind(this.#events);
+  public readonly once = this.#events.once.bind(this.#events);
+  public readonly off = this.#events.off.bind(this.#events);
 
   @Cron(CronExpression.EVERY_12_HOURS)
   public async cleanUpSessions() {
@@ -113,6 +133,10 @@ export class GameProfileService {
     return getLoginMethods(config, callbackUrl);
   }
 
+  public setLinkMessage(memberId: Snowflake, messageId: Snowflake) {
+    this.#setLinkMessage.run({ linkMessage: messageId, memberId });
+  }
+
   public async getRoleList(platform: string, token: string) {
     return fetchRoleList(platform, token);
   }
@@ -125,10 +149,13 @@ export class GameProfileService {
   ) {
     const auth = await loginRole(platform, token, roleId);
 
-    this.#setProfileToken.run({
+    const { linkMessage } = this.#setProfileToken.get({
       id: this.#hashids.decode(userId)[0],
       token: auth.token,
-    });
+    })!;
+    this.#events.emit('profileLinked', auth.nickName, linkMessage);
+
+    return auth.nickName;
   }
 
   private async fetchProfile(memberId: Snowflake) {

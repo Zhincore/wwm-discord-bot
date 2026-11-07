@@ -9,7 +9,7 @@ import { CodesModule } from './codes/codes.module.js';
 import { CommonModule } from './common/common.module.js';
 import { GameProfileModule } from './game-profile/game-profile.module.js';
 
-const devGuild = process.env.DISCORD_DEVELOPMENT_GUILD_ID;
+const devGuild = process.env.DISCORD_DEVELOPMENT_GUILD_ID?.trim();
 
 @Module({
   imports: [
