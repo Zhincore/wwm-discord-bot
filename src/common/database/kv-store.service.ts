@@ -17,7 +17,7 @@ export class KvStore<TShape extends Record<string, Json>> {
   readonly #clear;
 
   constructor(
-    @Inject(INQUIRER) private readonly parentClass: object,
+    @Inject(INQUIRER) parentClass: object,
     private readonly db: DatabaseService,
   ) {
     this.namespace = parentClass.constructor.name;

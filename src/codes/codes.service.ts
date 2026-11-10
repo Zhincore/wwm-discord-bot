@@ -11,8 +11,6 @@ import { fetchYarCodes } from './sources/yar.js';
 @Injectable()
 export class CodesService {
   private readonly logger = new Logger(CodesService.name);
-  // TODO: Lock
-  private fetching = false;
 
   #iterateGuilds;
   #getGuild;

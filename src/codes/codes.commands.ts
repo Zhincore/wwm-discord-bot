@@ -32,10 +32,7 @@ export class CodesCommands {
     role?: Role | null,
   ) {
     const channelName = channel ?? '*<nonexistant>*';
-
-    let roleName = role === null ? null : role?.name;
-    if (roleName === null) roleName = '*<nonexistant>*';
-    if (roleName === undefined) roleName = 'no';
+    let roleName = role?.name || 'no';
 
     return `New codes notifications will be sent to ${channelName} with ${roleName} role pinged.`;
   }

@@ -11,6 +11,7 @@ export const fetchYarCodes: CodesSource = async (lastCursor) => {
   const codes = data.active.filter((c) => c.verifiedAt);
   const latestCursor = codes[0]?.addedAt ?? lastCursor ?? '';
 
+  // Skip first fetch
   if (!lastCursor) return { latestCursor, codes: [] };
 
   return {

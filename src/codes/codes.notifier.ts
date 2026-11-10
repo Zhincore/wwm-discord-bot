@@ -30,7 +30,7 @@ export class CodesNotifier {
       const codesMore = codes.length - codesLimited.length;
 
       await channel.send({
-        content: 'New exchange codes!' + (role ? ` ${role}` : ''),
+        content: 'Chrip chirp! New exchange codes!' + (role ? ` ${role}` : ''),
         allowedMentions: { roles: role ? [role.id] : [] },
         embeds: [
           new EmbedBuilder()
