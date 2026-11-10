@@ -48,14 +48,14 @@ export class CodesService {
   }
 
   public async fetchCodes(): Promise<string[]> {
-    this.logger.log('Fetching codes...');
+    this.logger.debug('Fetching codes...');
     const lastCursor = this.store.get('lastCursor');
 
     const result = await fetchYarCodes(lastCursor);
 
     this.store.set('lastCursor', result.latestCursor);
 
-    this.logger.log(
+    this.logger.debug(
       `Fetching codes done, found ${result.codes.length} new codes.`,
     );
     return result.codes;

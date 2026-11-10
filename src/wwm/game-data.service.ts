@@ -94,21 +94,21 @@ export class GameDataService implements OnApplicationBootstrap {
 
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async refresh() {
-    this.logger.log('Refetching game data...');
+    this.logger.debug('Refetching game data...');
 
     for (const kind of WWM_DATA_KINDS) {
-      this.logger.log(`Fetching ${kind} data`);
+      this.logger.debug(`Fetching ${kind} data`);
       const data = await fetchGameData(kind);
       const rows = Array.isArray(data) ? data : Object.values(data);
 
       this.updateDataKind(kind, rows);
     }
 
-    this.logger.log(`Fetching affix data`);
+    this.logger.debug(`Fetching affix data`);
     const affixes = await fetchAffixNames();
     this.updateDataKind('affix', affixes);
 
-    this.logger.log('Refetching done.');
+    this.logger.debug('Refetching done.');
     this.#events.emit('dataUpdated');
   }
 

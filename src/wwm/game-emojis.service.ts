@@ -70,10 +70,10 @@ export class GameEmojisService {
     if (this.updating) return;
     this.updating = true;
     try {
-      this.logger.log('Updating game data emojis...');
+      this.logger.debug('Updating game data emojis...');
       await this.rebuildEmojiCache();
 
-      this.logger.log('Updating game data innerway emojis...');
+      this.logger.debug('Updating game data innerway emojis...');
       const innerWays = this.data.list('innerWay');
       const pathPics = innerWays
         .filter((a) => a.liupai_pic_url && a.is_post)
@@ -83,7 +83,7 @@ export class GameEmojisService {
         await this.ensureEmoji(getURLFilename(picUrl), picUrl);
       }
 
-      this.logger.log('Updating game data martial art emojis...');
+      this.logger.debug('Updating game data martial art emojis...');
       const martialArts = this.data.list('martialArt');
 
       for (const art of martialArts) {
@@ -91,7 +91,7 @@ export class GameEmojisService {
         await this.ensureEmoji(sluggify(art.name), art.pic_url);
       }
 
-      this.logger.log('Game data emojis updated.');
+      this.logger.debug('Game data emojis updated.');
     } finally {
       this.updating = false;
     }
