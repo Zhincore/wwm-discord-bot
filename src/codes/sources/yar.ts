@@ -3,7 +3,7 @@ import { fetchJSON } from '#common/utils.js';
 import { CodesSource } from './source.js';
 
 export const CODES_API_URL =
-  'https://codes-backend.wwmcodes.workers.dev/v1/codes';
+  'https://codes-backend-prod.wwmcodes.workers.dev/v1/codes';
 
 export const fetchYarCodes: CodesSource = async (lastCursor) => {
   const data = await fetchJSON<CodesResponse>(CODES_API_URL);
@@ -23,12 +23,16 @@ export const fetchYarCodes: CodesSource = async (lastCursor) => {
 interface CodeEntry {
   code: string;
   addedAt: string;
+  tags: string[];
+  expiresAt: string | null;
   expiredAt?: string;
-  verifiedAt?: string;
+  verifiedAt: string | null;
 }
 
 interface CodesResponse {
   updatedAt: string;
   active: CodeEntry[];
   expired: CodeEntry[];
+  announcement: object | null;
+  maintenance: { active: boolean; notice: string | null };
 }
