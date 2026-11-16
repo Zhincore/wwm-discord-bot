@@ -1,6 +1,10 @@
 import EventEmitter from 'node:events';
 
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type OnApplicationBootstrap,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm';
 
@@ -9,8 +13,8 @@ import { DatabaseService } from '#common/database/database.service.js';
 import {
   fetchGameData,
   WWM_DATA_KINDS,
-  WwmDataKindTypes,
-  WwmEleganceLevel,
+  type WwmDataKindTypes,
+  type WwmEleganceLevel,
 } from './game-data.client';
 import { gameData } from './game-data.schema';
 import { fetchAffixNames } from './where-builds-meet.client';

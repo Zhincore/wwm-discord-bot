@@ -1,6 +1,6 @@
 import { fetchJSON } from '#common/utils.js';
 
-import { CodesSource } from './source.js';
+import type { CodesSource } from './source.js';
 
 export const CODES_API_URL =
   'https://codes-backend-prod.wwmcodes.workers.dev/v1/codes';

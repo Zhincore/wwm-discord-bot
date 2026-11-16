@@ -1,4 +1,4 @@
-import { Snowflake } from 'discord.js';
+import type { Snowflake } from 'discord.js';
 import * as t from 'drizzle-orm/sqlite-core';
 
 export const snowflake = () => t.text().$type<Snowflake>();

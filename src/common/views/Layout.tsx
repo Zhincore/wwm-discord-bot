@@ -1,4 +1,4 @@
-import { Children, PropsWithChildren } from "@kitajs/html";
+import type { Children, PropsWithChildren } from "@kitajs/html";
 import safeCss from "./layout.css" with { type: "text" };
 
 export interface LayoutProps {

@@ -7,7 +7,7 @@ import { eq, sql } from 'drizzle-orm';
 import { DatabaseService } from '#common/database/database.service.js';
 import { onceReady } from '#common/utils.js';
 
-import { WwmMartialArt } from './game-data.client';
+import type { WwmMartialArt } from './game-data.client';
 import { GameDataService } from './game-data.service';
 import { gameDataEmojis } from './game-emojis.schema';
 

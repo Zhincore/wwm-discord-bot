@@ -8,15 +8,16 @@ import { AppService } from './app.service.js';
 import { CodesModule } from './codes/codes.module.js';
 import { CommonModule } from './common/common.module.js';
 import { GameProfileModule } from './game-profile/game-profile.module.js';
+import { GameModule } from './game/game.module.js';
 
-const devGuild = process.env.DISCORD_DEVELOPMENT_GUILD_ID?.trim();
+const devGuild = process.env['DISCORD_DEVELOPMENT_GUILD_ID']?.trim();
 
 @Module({
   imports: [
     // Vendor
     ScheduleModule.forRoot(),
     NecordModule.forRoot({
-      token: process.env.DISCORD_TOKEN!,
+      token: process.env['DISCORD_TOKEN']!,
       intents: [IntentsBitField.Flags.Guilds],
       development: devGuild ? [devGuild] : undefined,
     }),
@@ -25,6 +26,7 @@ const devGuild = process.env.DISCORD_DEVELOPMENT_GUILD_ID?.trim();
     CommonModule,
     CodesModule,
     GameProfileModule,
+    GameModule,
   ],
   controllers: [AppController],
   providers: [AppService],

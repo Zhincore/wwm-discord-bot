@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Snowflake } from 'discord.js';
+import type { Snowflake } from 'discord.js';
 import { eq, sql } from 'drizzle-orm';
 
 import { DatabaseService } from '#common/database/database.service.js';

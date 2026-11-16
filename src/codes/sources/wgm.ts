@@ -1,4 +1,4 @@
-import { CodesSource } from './source.js';
+import type { CodesSource } from './source.js';
 
 export const CODES_API_URL =
   'https://www.whereguildsmeet.org/api/redemption-codes';

@@ -2,7 +2,7 @@ import EventEmitter from 'node:events';
 
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { Snowflake } from 'discord.js';
+import type { Snowflake } from 'discord.js';
 import { and, eq, isNull, lt, or, sql } from 'drizzle-orm';
 import Hashids from 'hashids';
 import ms from 'ms';
@@ -16,7 +16,7 @@ import {
   getLoginMethods,
   loginRole,
 } from '#wwm/easebar-auth.client.js';
-import {
+import type {
   WwmSect,
   WwmBanner,
   WwmEleganceLevel,
@@ -34,7 +34,7 @@ interface GameProfileServiceEvents {
 export class GameProfileService {
   readonly #events = new EventEmitter<GameProfileServiceEvents>();
 
-  #hashids = new Hashids(process.env.SALT, 8);
+  #hashids = new Hashids(process.env['SALT']!, 32);
   #authConfigs = new FetchCache((lang: string) => fetchAuthConfig(lang), {
     ttl: ms('12h'),
   });
@@ -126,7 +126,7 @@ export class GameProfileService {
 
   private async getLoginMethods(userId: string, lang: string = 'en_US') {
     const callbackUrl =
-      process.env.PUBLIC_URL!.replace(/\/+$/, '') +
+      process.env['PUBLIC_URL']!.replace(/\/+$/, '') +
       `/game-profile/${userId}/callback`;
 
     const config = await this.#authConfigs.get(lang);

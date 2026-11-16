@@ -1,6 +1,6 @@
 import { fetchJSON } from '#common/utils.js';
 
-import { RoleDetails, RoleInfo } from './game-profile';
+import type { RoleDetails, RoleInfo } from './game-profile';
 
 const LOGIN_BASE_URL = 'https://sdk-os.mpsdk.easebar.com/api/users/login/v2';
 const LOGIN_BASE_PARAMS =
@@ -116,7 +116,7 @@ function parseToken<T>(token: string): T {
 }
 
 function parseJwt(jwt: string): JwtData {
-  return parseToken(jwt.split('.')[1]);
+  return parseToken(jwt.split('.')[1]!);
 }
 
 interface TokenData {

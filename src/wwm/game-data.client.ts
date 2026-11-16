@@ -45,15 +45,15 @@ const isWhitespace = (b: number) => b === 0x20 || (b >= 0x09 && b <= 0x0d);
 function decodeGameData(bytes: Uint8Array): Buffer {
   let start = 0;
   let end = bytes.length;
-  while (start < end && isWhitespace(bytes[start])) start++;
-  while (end > start && isWhitespace(bytes[end - 1])) end--;
+  while (start < end && isWhitespace(bytes[start]!)) start++;
+  while (end > start && isWhitespace(bytes[end - 1]!)) end--;
 
   const len = end - start;
   const out = new Uint8Array(len);
   let j = 0;
   for (let r = 0; r < len; r++) {
     if (r % CHUNK === CHUNK - 1) continue;
-    out[j++] = bytes[end - 1 - r];
+    out[j++] = bytes[end - 1 - r]!;
   }
   if (len % CHUNK !== 0) j--;
 

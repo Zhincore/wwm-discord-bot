@@ -23,7 +23,7 @@ export async function fetchAffixNames() {
     if (!affix) console.log(`[${LOG_KEY}] Affix not found ${key}`);
     return {
       id: +id,
-      name: affix.name || '???',
+      name: affix?.name || '???',
     };
   });
 }

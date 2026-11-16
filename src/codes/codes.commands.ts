@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
-  GuildBasedChannel,
+  type GuildBasedChannel,
   GuildChannel,
   InteractionContextType,
   PermissionFlagsBits,

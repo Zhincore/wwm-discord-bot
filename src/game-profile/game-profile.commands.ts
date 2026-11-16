@@ -8,7 +8,7 @@ import {
   EmbedBuilder,
   GuildMember,
   InteractionContextType,
-  Snowflake,
+  type Snowflake,
   TextDisplayBuilder,
 } from 'discord.js';
 import {
@@ -22,7 +22,7 @@ import {
   type UserCommandContext,
 } from 'necord';
 
-import { WwmMartialArt } from '#wwm/game-data.client.js';
+import type { WwmMartialArt } from '#wwm/game-data.client.js';
 import { GameEmojisService } from '#wwm/game-emojis.service.js';
 
 import { ShowProfileDto } from './dto/show-profile.dto';
@@ -90,7 +90,7 @@ export class GameProfileCommands {
         ...methods
           .reduce(
             (acc, m) => {
-              let arr = acc[acc.length - 1];
+              let arr = acc[acc.length - 1]!;
               if (arr.length == 5) {
                 arr = [];
                 acc.push(arr);
@@ -118,11 +118,11 @@ export class GameProfileCommands {
   private async updateLinkMessage(nickname: string, linkMessage: Snowflake) {
     const [channelId, messageId] = linkMessage.split(':');
 
-    const channel = await this.channels.fetch(channelId);
+    const channel = await this.channels.fetch(channelId!);
     if (!channel?.isTextBased()) return;
 
     return await channel.messages
-      .edit(messageId, {
+      .edit(messageId!, {
         components: [
           new TextDisplayBuilder().setContent(
             `Successfuly linked character ${nickname} to your Discord!`,

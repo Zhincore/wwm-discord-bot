@@ -3,7 +3,7 @@ import fs from 'node:fs';
 
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { BunAdapter, NestBunApplication } from 'nestjs-platform-bun';
+import { BunAdapter, type NestBunApplication } from 'nestjs-platform-bun';
 
 import { AppModule } from './app.module.js';
 import { DATA_DIR } from './consts.js';
@@ -16,12 +16,13 @@ async function bootstrap() {
     AppModule,
     new BunAdapter(),
   );
+  app.enableShutdownHooks();
   import.meta.hot.dispose(async () => {
     logger.log('Closing server for hot reload...');
     await app.close().catch(console.error);
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env['PORT'] ?? 3000);
   logger.log(`Listening on ${await app.getUrl()}`);
 }
 await bootstrap();
