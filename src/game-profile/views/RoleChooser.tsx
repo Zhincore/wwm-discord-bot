@@ -1,5 +1,5 @@
 import { Layout } from "#common/views/Layout.js";
-import type { RoleInfo } from "#wwm/game-profile.js";
+import type { RoleInfo } from "#game-data/game-profile.js";
 import safeCss from "./Link.css" with { type: "text" };
 
 interface RoleProps {

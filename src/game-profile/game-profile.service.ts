@@ -15,14 +15,14 @@ import {
   fetchRoleList,
   getLoginMethods,
   loginRole,
-} from '#wwm/easebar-auth.client.js';
+} from '#game-data/easebar-auth.client.js';
 import type {
   WwmSect,
   WwmBanner,
   WwmEleganceLevel,
   WwmMartialArt,
-} from '#wwm/game-data.client.js';
-import { GameDataService } from '#wwm/game-data.service.js';
+} from '#game-data/game-data.client.js';
+import { GameDataService } from '#game-data/game-data.service.js';
 
 import { gameProfiles } from './game-profile.schema';
 

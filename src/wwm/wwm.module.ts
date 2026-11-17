@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { GameDataService } from './game-data.service';
-import { GameEmojisService } from './game-emojis.service';
+import { GameDataModule } from '#game-data/game-data.module.js';
+
+import { WwmCommands } from './wwm.commands.js';
+import { WwmService } from './wwm.service.js';
 
 @Module({
-  providers: [GameDataService, GameEmojisService],
-  exports: [GameDataService, GameEmojisService],
+  imports: [GameDataModule],
+  providers: [WwmService, WwmCommands],
+  exports: [WwmService],
 })
 export class WwmModule {}

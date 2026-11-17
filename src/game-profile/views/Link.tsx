@@ -1,5 +1,5 @@
 import { Layout } from "#common/views/Layout.js";
-import type { LoginMethod } from "#wwm/easebar-auth.client.js";
+import type { LoginMethod } from "#game-data/easebar-auth.client.js";
 import safeCss from "./Link.css" with { type: "text" };
 
 interface LinkProps {

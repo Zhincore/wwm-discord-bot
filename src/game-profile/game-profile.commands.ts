@@ -22,8 +22,8 @@ import {
   type UserCommandContext,
 } from 'necord';
 
-import type { WwmMartialArt } from '#wwm/game-data.client.js';
-import { GameEmojisService } from '#wwm/game-emojis.service.js';
+import type { WwmMartialArt } from '#game-data/game-data.client.js';
+import { GameEmojisService } from '#game-data/game-emojis.service.js';
 
 import { ShowProfileDto } from './dto/show-profile.dto';
 import { GameProfileService } from './game-profile.service';
