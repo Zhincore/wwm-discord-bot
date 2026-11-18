@@ -3,12 +3,14 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { IntentsBitField } from 'discord.js';
 import { NecordModule } from 'necord';
 
+import { LLMModule } from '#llm/llm.module.js';
+
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { CodesModule } from './codes/codes.module.js';
 import { CommonModule } from './common/common.module.js';
 import { GameProfileModule } from './game-profile/game-profile.module.js';
-import { GameModule } from './game/game.module.js';
+import { WwmModule } from './wwm/wwm.module.js';
 
 const devGuild = process.env['DISCORD_DEVELOPMENT_GUILD_ID']?.trim();
 
@@ -26,7 +28,8 @@ const devGuild = process.env['DISCORD_DEVELOPMENT_GUILD_ID']?.trim();
     CommonModule,
     CodesModule,
     GameProfileModule,
-    GameModule,
+    WwmModule,
+    LLMModule,
   ],
   controllers: [AppController],
   providers: [AppService],
