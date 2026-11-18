@@ -6,6 +6,16 @@ const ENDPOINT_RE = /^([A-Z]+) (\/.+)$/;
 /** Typecheck of endpoint key formatting */
 ((): `${Uppercase<string>} /${string}` => null as unknown as keyof Endpoints)();
 
+/** Non-2xx answer of the game API */
+export class WwmApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 /** Typed REST client of the game API */
 export class WwmProxy {
   constructor(
@@ -53,11 +63,14 @@ export class WwmProxy {
 
     if (error) {
       if (typeof error === 'object' && 'detail' in error) {
-        throw new Error(error.detail + '');
+        throw new WwmApiError(response.status, error.detail + '');
       }
-      throw new Error(error + '');
+      throw new WwmApiError(response.status, error + '');
     }
-    throw new Error(`Error fetching WWM Proxy API: ${response.statusText}`);
+    throw new WwmApiError(
+      response.status,
+      `Error fetching WWM Proxy API: ${response.statusText}`,
+    );
   }
 }
 

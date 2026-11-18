@@ -5,14 +5,20 @@ import {
   type OnModuleDestroy,
 } from '@nestjs/common';
 
+import type {
+  GuildPart,
+  GuildParts,
+  GuildWarPart,
+  GuildWarParts,
+  NoGuild,
+  PlayerInclude,
+} from './proxy/wwm-api';
 import {
   WwmEvents,
   type WwmEventListener,
   type WwmEventName,
 } from './proxy/wwm-events';
 import { WwmProxy } from './proxy/wwm-proxy';
-import { LLM_MODEL } from '#consts.ts';
-import type { OpenRouter } from '@openrouter/sdk';
 
 const WWM_API = process.env['WWM_API']?.trim() || '';
 const WWM_API_TOKEN = process.env['WWM_API_TOKEN']?.trim() || '';
@@ -23,18 +29,9 @@ export class WwmService implements OnApplicationBootstrap, OnModuleDestroy {
   readonly #wwm = new WwmProxy(WWM_API, WWM_API_TOKEN);
   readonly #events = new WwmEvents(WWM_API, WWM_API_TOKEN, this.#logger);
 
-constructor(private readonly llm: OpenRouter) {}
-
   onApplicationBootstrap() {
     if (WWM_API) this.#events.start();
-    else this.#logger.warn('WWM_API not specified, disabled.');this.llm.chat.send({
-      chatRequest: {
-        model: LLM_MODEL,
-        provider: {
-          dataCollection: "deny",
-
-      },
-    });
+    else this.#logger.warn('WWM_API not specified, disabled.');
   }
 
   onModuleDestroy() {
@@ -52,14 +49,53 @@ constructor(private readonly llm: OpenRouter) {}
     return this.#wwm.fetch.bind(this.#wwm);
   }
 
-  public async fetchPlayer(who: string) {
+  /** Player card; `include` adds the optional groups. */
+  public async fetchPlayer(who: string, include: PlayerInclude[] = []) {
     return await this.fetch?.('GET /player/{who}', {
+      params: { who },
+      query: include.length ? { include: include.join() } : {},
+    });
+  }
+
+  public async fetchPlayerCohort(who: string) {
+    return await this.fetch?.('GET /player/{who}/cohort', {
       params: { who },
       query: {},
     });
   }
 
-  public async fetchGuild(which: string) {
-    return await this.fetch?.('GET /guild/members', {});
+  public fetchGuild(which?: string) {
+    return this.fetchGuildPart('base', which);
+  }
+
+  /** One part of our own guild, or of the guild with the numeric ID `which`. */
+  public async fetchGuildPart<K extends keyof GuildParts>(
+    part: K,
+    which?: string,
+  ) {
+    const response = which
+      ? await this.fetch?.('GET /guilds/{guild}/{part}', {
+          params: { guild: which, part },
+          query: {},
+        })
+      : await this.fetch?.(`GET /guild/${part as 'base'}`, {});
+    return response as GuildPart<K> | NoGuild | undefined;
+  }
+
+  /** Guilds whose name contains the whole word `name`, largest first. */
+  public async searchGuilds(name: string, limit?: number) {
+    const response = await this.fetch?.('GET /guilds', {
+      query: limit ? { name, limit } : { name },
+    });
+    return response?.results;
+  }
+
+  /** One part of our own guild's Guild War data. */
+  public async fetchGuildWarPart<K extends keyof GuildWarParts>(part: K) {
+    const response = await this.fetch?.(
+      `GET /guildwar/${part as 'league'}`,
+      {},
+    );
+    return response as GuildWarPart<K> | undefined;
   }
 }
