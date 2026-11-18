@@ -10,7 +10,6 @@ const TYPING_INTERVAL = 8_000;
 
 const EMPTY_HINT = 'Mention me together with your question.';
 const BUSY_HINT = "I'm still working on your previous question.";
-const EMPTY_ANSWER = "I don't have an answer for that.";
 const ERROR_REPLY = 'Something went wrong, try again later.';
 
 /** Shorten `text` to Discord's message limit, preferring a line break. */
@@ -34,6 +33,13 @@ export class LLMListener {
     if (message.author.bot || !message.inGuild()) return;
     if (!message.mentions.users.has(botId)) return;
 
+    const enabled = this.service.isEnabled(message.guildId);
+    if (!enabled) return;
+    if (typeof enabled === 'string') {
+      const role = await message.guild.roles.fetch(enabled);
+      if (!role?.members.has(message.author.id)) return;
+    }
+
     this.#conversations ??= new Conversations<Message>(botId, (m) =>
       this.#text(m, botId),
     );
@@ -48,7 +54,7 @@ export class LLMListener {
     );
     try {
       await message.channel.sendTyping().catch(() => null);
-      const { answer, turns } = await this.service.ask({
+      const result = await this.service.ask({
         text,
         asker: {
           id: message.author.id,
@@ -56,8 +62,10 @@ export class LLMListener {
         },
         history: await conversations.historyFor(message),
       });
-      const sent = await this.#reply(message, answer.trim() || EMPTY_ANSWER);
-      if (sent) conversations.remember(sent.id, turns);
+      if (result?.answer.trim()) {
+        const sent = await this.#reply(message, result.answer.trim());
+        if (sent) conversations.remember(sent.id, result.turns);
+      }
     } catch (error) {
       if (error instanceof BusyError) {
         return await this.#reply(message, BUSY_HINT);
@@ -80,7 +88,7 @@ export class LLMListener {
   }
 
   /** Reply without letting the content ping anyone but the asker. */
-  #reply(message: Message, content: string) {
+  async #reply(message: Message, content: string) {
     return message
       .reply({
         content: fitMessage(content),

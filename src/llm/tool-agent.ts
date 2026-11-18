@@ -26,7 +26,8 @@ export function defineTool<Schema extends z.ZodObject>(
 }
 
 export interface ToolAgentOptions {
-  model: string;
+  /** One model, or several in order of preference: later ones are tried when an earlier one fails */
+  model: string | readonly string[];
   tools: readonly Tool[];
   /** Default system prompt */
   instructions?: string;
@@ -85,7 +86,8 @@ export class ToolAgent {
       signal,
     }: ToolAgentRunOptions = {},
   ): Promise<string> {
-    const { model, request } = this.options;
+    const { request } = this.options;
+    const models = [this.options.model].flat();
     const maxIterations = this.options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     const input: InputItem[] = [
       ...history.map(({ role, content }) => ({ role, content })),
@@ -101,7 +103,7 @@ export class ToolAgent {
           responsesRequest: {
             ...request,
             provider: { requireParameters: true, ...request?.provider },
-            model,
+            ...(models.length > 1 ? { models } : { model: models[0] }),
             instructions,
             tools: last ? undefined : this.#definitions,
             input,

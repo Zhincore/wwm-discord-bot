@@ -20,14 +20,17 @@ const devGuild = process.env['DISCORD_DEVELOPMENT_GUILD_ID']?.trim();
     ScheduleModule.forRoot(),
     NecordModule.forRoot({
       token: process.env['DISCORD_TOKEN']!,
-      intents: [IntentsBitField.Flags.Guilds],
+      intents: [
+        IntentsBitField.Flags.Guilds,
+        IntentsBitField.Flags.GuildMessages,
+      ],
       development: devGuild ? [devGuild] : undefined,
     }),
 
     // Internal
     CommonModule,
     CodesModule,
-    GameProfileModule,
+    // GameProfileModule,
     WwmModule,
     LLMModule,
   ],

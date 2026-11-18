@@ -1,11 +1,15 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { OpenRouter } from '@openrouter/sdk';
+import type { Snowflake } from 'discord.js';
+import { eq, sql } from 'drizzle-orm';
 
-import { GUILD_NAME, LLM_CONTEXT, LLM_MODEL } from '#consts.ts';
+import { DatabaseService } from '#common/database/database.service.ts';
+import { GUILD_NAME, LLM_CONTEXT, LLM_MODELS } from '#consts.ts';
 import { WwmService } from '#wwm/wwm.service.ts';
 
 import { formatUserTurn, type Asker } from './conversation';
 import { getInstructions } from './instructions';
+import { llmRoles } from './llm-settings.schema';
 import { ToolAgent, type Turn } from './tool-agent';
 import { createWwmTools } from './wwm-tools';
 
@@ -38,18 +42,52 @@ export class LLMService {
   readonly #agent: ToolAgent;
   readonly #busy = new Set<string>();
 
+  #getWhitelist;
+  #addWhitelist;
+  #removeWhitelist;
+
   constructor(
     wwm: WwmService,
+    db: DatabaseService,
     @Optional()
     @Inject(ASKER_RESOLVER)
     private readonly askerResolver?: AskerResolver,
   ) {
     this.#agent = new ToolAgent(this.#llm, {
-      model: LLM_MODEL,
-      maxIterations: 4,
-      request: { toolChoice: 'auto', store: false, maxOutputTokens: 1024 },
+      model: LLM_MODELS,
+      maxIterations: 5,
+      request: { toolChoice: 'auto', store: false, temperature: 0.5 },
       tools: createWwmTools(wwm),
     });
+
+    const guildId = sql.placeholder('guildId');
+    const roleId = sql.placeholder('roleId');
+
+    this.#getWhitelist = db
+      .select()
+      .from(llmRoles)
+      .where(eq(llmRoles.guildId, guildId));
+    this.#addWhitelist = db
+      .insert(llmRoles)
+      .values({ guildId, roleId })
+      .onConflictDoUpdate({ target: llmRoles.guildId, set: { roleId } });
+    this.#removeWhitelist = db
+      .delete(llmRoles)
+      .where(eq(llmRoles.guildId, guildId));
+  }
+
+  enable(guildId: Snowflake, roleId?: Snowflake) {
+    return !!this.#addWhitelist.run({ guildId, roleId }).lastInsertRowid;
+  }
+  disable(guildId: Snowflake) {
+    this.#removeWhitelist.run({ guildId });
+  }
+
+  isEnabled(guildId: Snowflake) {
+    const result = this.#getWhitelist.get({ guildId });
+    if (!result) return false;
+    if (result.roleId) return result.roleId as Snowflake;
+    return true;
   }
 
   /** Answer a question; resolves with the answer and the conversation including it. */
@@ -68,6 +106,8 @@ export class LLMService {
         history,
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
+      if (answer.trim().toUpperCase() === 'SKIP') return;
+
       const turns: Turn[] = [
         ...history,
         turn,

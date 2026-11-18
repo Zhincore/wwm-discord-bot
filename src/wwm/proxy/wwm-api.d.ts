@@ -90,6 +90,7 @@ export interface Endpoints {
   "GET /guildwar/matchmaking": { response: GuildWarPart<"matchmaking"> };
   "GET /guildwar/matches": { response: GuildWarPart<"matches"> };
   "GET /guildwar/signups": { response: GuildWarPart<"signups"> };
+  "GET /guildwar/schedule": { response: GuildWarPart<"schedule"> };
 
   /**
    * `who`: exact player name, numeric player ID (`uid`), or a Pid (a bare Pid of a player outside
@@ -344,6 +345,7 @@ export interface GuildWarParts {
   matches: GuildWarMatch[];
   /** keyed by league day number as string */
   signups: Record<string, GuildWarSignupDay>;
+  schedule: GuildWarSchedule;
 }
 
 export interface GuildWarSnapshot extends GuildWarParts {
@@ -352,6 +354,21 @@ export interface GuildWarSnapshot extends GuildWarParts {
 }
 
 export type GuildWarPart<K extends keyof GuildWarParts> = { updated: Timestamp; club_id: string } & Pick<GuildWarParts, K>;
+
+/** Upcoming Guild War times; league and matchmaking share the same days and start. */
+export interface GuildWarSchedule {
+  season?: number;
+  season_name?: string;
+  /** match days, 1 = Monday .. 7 = Sunday */
+  weekdays?: number[];
+  /**
+   * start of the next match on each match day, soonest first. Empty until a league match is in
+   * `matches`: the season table's clock is in region time, calibrated from a past league start.
+   */
+  next_match_ts?: Timestamp[];
+  /** end of the season; may be off by a few hours (same region-time uncertainty, not calibrated) */
+  season_end_ts?: Timestamp;
+}
 
 export interface GuildWarLeague {
   season?: number;
@@ -518,13 +535,39 @@ export interface PlayerMentor {
 /** A game id with its localised name; `name` is absent when the game has no text for the id. */
 export interface Named { id: number; name?: string }
 
+/** One rolled stat of an item. */
+export interface EquipmentAffix extends Named {
+  /** raw value; a rate is a fraction (0.097 = 9.7%) */
+  value?: number;
+  /** the value as the game displays it, e.g. "9.7%" or "85.2" */
+  text?: string;
+  /** best possible roll of this affix (same unit as `value`) */
+  max?: number;
+}
+
+export interface PlayerEquipment extends Named {
+  slot: number;
+  /** e.g. "Secondary Weapon" */
+  slot_name?: string;
+  star?: number;
+  level?: number;
+  /** fixed attributes of the item, e.g. Max Physical Attack 175 */
+  base?: { key: string; name?: string; value: number; text?: string }[];
+  /** rolled affixes in the game's order; the last one is the attuned stat when the item is attuned */
+  affixes?: EquipmentAffix[];
+  /** attuned passive effect; `name` is its full description */
+  effect?: Named;
+  /** gear set the piece counts towards */
+  set?: Named;
+}
+
 export interface PlayerLoadout {
   martial_arts: { main?: Named; sub?: Named };
   inner_ways: Named[];
   /** sorted by slot */
   mystic_skills: (Named & { slot: number })[];
   /** worn equipment sorted by slot; `id` is the item number (`equips[slot].No`) */
-  equipment: (Named & { slot: number; star?: number; level?: number })[];
+  equipment: PlayerEquipment[];
 }
 
 /** Minimal by default; the optional groups appear only when requested with `include`. */

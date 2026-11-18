@@ -7,5 +7,9 @@ export const DATA_DIR = '.data';
 export const CODES_API_URL =
   'https://codes-backend.wwmcodes.workers.dev/v1/codes';
 
-export const LLM_MODEL = e('LLM_MODEL') || 'openrouter/free';
+/** Models to answer with, in order of preference; later ones are fallbacks when an earlier one fails. */
+export const LLM_MODELS = (e('LLM_MODEL') || 'openrouter/free')
+  .split(',')
+  .map((model) => model.trim())
+  .filter(Boolean);
 export const LLM_CONTEXT = e('LLM_CONTEXT');

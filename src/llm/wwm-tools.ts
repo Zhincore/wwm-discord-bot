@@ -9,6 +9,7 @@ import type {
   Named,
   NoGuild,
   PlayerInclude,
+  PlayerLoadout,
   RelatedPlayer,
 } from '#wwm/proxy/wwm-api.d.ts';
 import { WwmApiError } from '#wwm/proxy/wwm-proxy.ts';
@@ -24,6 +25,19 @@ const MAX_MATCH_PLAYERS = 10;
 const MAX_EVENTS = 10;
 const MAX_GUILDS = 10;
 const SERVER_UTC_OFFSET_HOURS = 8;
+const WEEKDAYS = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+/** Letters and digits only, lowercased: "CZ-Lamy" and "cz lamy" compare equal. */
+const plainName = (name = '') =>
+  name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
 /** Guild log categories as the API numbers them */
 const LOG_KINDS = {
@@ -83,6 +97,81 @@ function presence(player: { online?: boolean; logout_ts?: number }) {
 /** Name of a game entity, or a placeholder when the game has no text for its id. */
 function named(entry?: Named) {
   return entry && (entry.name ?? `unknown (#${entry.id})`);
+}
+
+type Gear = PlayerLoadout['equipment'][number];
+
+/** One worn item as its slot, set and readable stats; the item name says little in this game. */
+function shapeGear(item: Gear) {
+  const stat = (s: { name?: string; text?: string; value?: number }) =>
+    `${s.name ?? 'unknown stat'} ${s.text ?? s.value ?? ''}`.trim();
+  return {
+    slot: item.slot_name ?? `slot ${item.slot}`,
+    stars: item.star,
+    level: item.level,
+    set: item.set?.name,
+    base_stats: item.base?.map(stat),
+    stats: item.affixes?.map(stat),
+    effect: item.effect?.name,
+  };
+}
+
+/** How many worn pieces belong to each gear set, e.g. `{ Mistwillow: 4 }`. */
+function gearSets(gear: Gear[]) {
+  const sets: Record<string, number> = {};
+  for (const { set } of gear) {
+    if (set?.name) sets[set.name] = (sets[set.name] ?? 0) + 1;
+  }
+  return sets;
+}
+
+/** Every stat summed over all worn items (base attributes and rolled stats), in the game's format. */
+function gearTotals(gear: Gear[]) {
+  const totals = new Map<string, { sum: number; percent: boolean }>();
+  for (const item of gear) {
+    for (const s of [...(item.base ?? []), ...(item.affixes ?? [])]) {
+      if (!s.name || typeof s.value !== 'number') continue;
+      const total = totals.get(s.name) ?? {
+        sum: 0,
+        percent: s.text?.endsWith('%') ?? false,
+      };
+      total.sum += s.value;
+      totals.set(s.name, total);
+    }
+  }
+  return Object.fromEntries(
+    [...totals].map(([name, { sum, percent }]) => [
+      name,
+      percent
+        ? `${(sum * 100).toFixed(1)}%`
+        : String(Math.round(sum * 10) / 10),
+    ]),
+  );
+}
+
+/**
+ * Replace the server-clock times in a guild log line with Discord tags:
+ * "Sat 01:30 (UTC+8)" becomes the first such moment after the entry, "02:00 (UTC+8)" a time of day.
+ */
+function localTimes(text: string, entryTs: number) {
+  const offset = SERVER_UTC_OFFSET_HOURS * 3600;
+  const server = new Date((entryTs + offset) * 1000);
+  const midnight = Math.floor((entryTs + offset) / 86_400) * 86_400;
+  const today = (server.getUTCDay() + 6) % 7;
+  return text.replace(
+    /(:)?(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun) )?(\d{2}):(\d{2}) \(UTC\+8\)(;)?/g,
+    (_, label, day: string | undefined, hour: string, minute: string, more) => {
+      // the game writes "Boss:time;Boss:time"; spell it out as "Boss on time, Boss on time"
+      const wrap = (tag: string) =>
+        `${label ? ' on ' : ''}${tag}${more ? ', ' : ''}`;
+      const clock = Number(hour) * 3600 + Number(minute) * 60;
+      if (!day) return wrap(formatClock(midnight + clock - offset));
+      const index = WEEKDAYS.findIndex((name) => name.startsWith(day));
+      let ts = midnight + ((index - today + 7) % 7) * 86_400 + clock - offset;
+      if (ts <= entryTs) ts += 7 * 86_400;
+      return wrap(`<t:${ts}:f>`);
+    },
+  );
 }
 
 function shapeRelated(player: RelatedPlayer) {
@@ -160,25 +249,54 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     if (!name || name.toLowerCase() === GUILD_NAME?.toLowerCase()) return;
     if (/^\d+$/.test(name)) return name;
 
-    const found = await call(
-      wwm.searchGuilds(name, MAX_GUILDS),
-      `No guild named "${name}" found.`,
-    );
-    const results = found.filter((g) => g.id !== undefined);
-    const exact = results.filter(
-      (g) => g.name?.toLowerCase() === name.toLowerCase(),
-    );
+    const notFound = `No guild named "${name}" found.`;
+    const search = async (query: string) => {
+      const found = await call(
+        wwm.searchGuilds(query, MAX_GUILDS),
+        notFound,
+      ).catch((error: Error) => {
+        if (error.message === notFound) return [];
+        throw error;
+      });
+      return found.filter((g) => g.id !== undefined);
+    };
+    const exactOf = (found: Awaited<ReturnType<typeof search>>) =>
+      found.filter((g) => plainName(g.name) === plainName(name));
+
+    let results = await search(name);
+    if (exactOf(results).length !== 1) {
+      // The game matches whole words only, so a full name such as "CZ-Lamy" can find nothing.
+      const words = [...new Set(name.split(/[^\p{L}\p{N}]+/u))]
+        .filter((word) => word.length >= 3 && word !== name)
+        .sort((x, y) => y.length - x.length)
+        .slice(0, 3);
+      for (const word of words) {
+        const known = new Set(results.map((g) => g.id));
+        results.push(...(await search(word)).filter((g) => !known.has(g.id)));
+        if (exactOf(results).length === 1) break;
+      }
+    }
+
+    const exact = exactOf(results);
     const match = exact.length === 1 ? exact : results;
     if (match.length === 1) return String(match[0]!.id);
-    if (match.length === 0) {
-      throw new Error(
-        `No guild named "${name}" found. The search matches whole words; try one distinctive word from the name.`,
-      );
-    }
+    if (match.length === 0) throw new Error(notFound);
     return {
       note: 'Several guilds match. Ask the user which one they mean.',
       guilds: match.map(shapeGuildResult),
     };
+  }
+
+  /** Members of our own guild whose name equals `name` ignoring case and punctuation, else those containing it. */
+  async function guildMembersLike(name: string) {
+    const wanted = plainName(name);
+    if (!wanted) return [];
+    const data = await wwm.fetchGuildPart('members').catch(() => undefined);
+    if (!data || 'club' in data) return [];
+    const all = Object.values(data.members);
+    const exact = all.filter((m) => plainName(m.name) === wanted);
+    if (exact.length || wanted.length < 3) return exact;
+    return all.filter((m) => plainName(m.name).includes(wanted));
   }
 
   /** Fetch one part of the guild the model named and shape it. */
@@ -360,7 +478,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             entries: shown.map((entry) => ({
               time: formatTime(entry.ts),
               category: entry.title.replace(/^\[|\]$/g, ''),
-              text: entry.text,
+              text: localTimes(entry.text, entry.ts),
             })),
           };
         }),
@@ -369,11 +487,11 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'guild_war',
       description:
-        "Get our own guild's Guild War data. Use standing for league rank, score, win and loss record and the current opponent. Use matches for recent match results, including each of our players' kills, deaths, assists and who was MVP. Only available for our own guild.",
+        "Get our own guild's Guild War data. Use schedule for when the next Guild War matches start. Use standing for league rank, score, win and loss record and the current opponent. Use matches for recent match results, including each of our players' kills, deaths, assists and who was MVP. Only available for our own guild.",
       schema: z.object({
         what: z
-          .enum(['standing', 'matches'])
-          .describe('standing or matches, see the tool description.'),
+          .enum(['schedule', 'standing', 'matches'])
+          .describe('schedule, standing or matches, see the tool description.'),
         limit: z
           .number()
           .int()
@@ -383,6 +501,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           .describe('Only with matches: how many recent matches. Default 3.'),
       }),
       execute: async ({ what, limit = 3 }) => {
+        what = what.trim() as typeof what;
         const notFound = 'No Guild War data found.';
         if (what === 'matches') {
           const { matches, updated } = await call(
@@ -394,6 +513,24 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             total: matches.length,
             shown: shown.length,
             matches: shown.map(shapeMatch),
+            as_of: formatTime(updated),
+          };
+        }
+
+        if (what === 'schedule') {
+          const { schedule, updated } = await call(
+            wwm.fetchGuildWarPart('schedule'),
+            notFound,
+          );
+          const upcoming = schedule.next_match_ts ?? [];
+          return {
+            season: schedule.season,
+            season_name: schedule.season_name,
+            match_days: schedule.weekdays?.map((day) => WEEKDAYS[day - 1]),
+            next_matches: upcoming.length
+              ? upcoming.map((ts) => formatTime(ts))
+              : 'start time unknown',
+            note: 'League and matchmaking matches both start at these times.',
             as_of: formatTime(updated),
           };
         }
@@ -434,26 +571,60 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'find_player',
       description:
-        'Look up one player by exact name or numeric UID. Returns level, sect, and whether they are online or when they were last seen. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their skills and equipment, cohort for their cohort members.',
+        'Look up one player by name or numeric UID. Returns level, sect, and whether they are online or when they were last seen. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, cohort for their cohort members.',
       schema: z.object({
-        player: z.string().describe('Exact player name or numeric UID.'),
+        player: z
+          .string()
+          .describe(
+            'Player name as the user wrote it, or numeric UID. Prefer the UID when you know it.',
+          ),
         include: z
-          .array(z.enum(['guild', 'pvp', 'build', 'cohort']))
+          .array(z.enum(['guild', 'pvp', 'build', 'gear', 'cohort']))
           .optional()
           .describe('Extra groups to return; omit for the basic profile.'),
       }),
       execute: async ({ player, include = [] }) => {
         const who = player.trim();
         const notFound = `No player named "${who}" found.`;
-        const groups = include.filter(
-          (group): group is PlayerInclude => group !== 'cohort',
-        );
-        const [profile, cohort] = await Promise.all([
-          call(wwm.fetchPlayer(who, groups), notFound),
-          include.includes('cohort')
-            ? call(wwm.fetchPlayerCohort(who), notFound)
-            : undefined,
-        ]);
+        const wants = (group: (typeof include)[number]) =>
+          include.includes(group);
+        const groups = [
+          ...new Set(
+            include.flatMap((group): PlayerInclude[] =>
+              group === 'cohort' ? [] : group === 'gear' ? ['build'] : [group],
+            ),
+          ),
+        ];
+        const fetch = (id: string) =>
+          Promise.all([
+            call(wwm.fetchPlayer(id, groups), notFound),
+            wants('cohort')
+              ? call(wwm.fetchPlayerCohort(id), notFound)
+              : undefined,
+          ]);
+
+        let found: Awaited<ReturnType<typeof fetch>>;
+        try {
+          found = await fetch(who);
+        } catch (error) {
+          if (!(error instanceof Error) || error.message !== notFound) {
+            throw error;
+          }
+          // The game finds only the exact nickname, so fall back to our guild's member list.
+          const matches = await guildMembersLike(who);
+          if (matches.length === 0) throw error;
+          if (matches.length > 1) {
+            return {
+              note: 'No player has exactly this name, but these members of our guild are close. Ask the user which one they mean.',
+              players: matches
+                .slice(0, MAX_GUILDS)
+                .map((m) => ({ name: m.name, uid: m.uid, level: m.level })),
+            };
+          }
+          found = await fetch(matches[0]!.uid);
+        }
+        const [profile, cohort] = found;
+        const gear = profile.loadout?.equipment ?? [];
 
         return {
           name: profile.name,
@@ -476,19 +647,26 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             matches: profile.pvp.matches,
             best_streak: profile.pvp.best_streak,
           },
-          build: profile.loadout && {
-            martial_arts: [
-              named(profile.loadout.martial_arts.main),
-              named(profile.loadout.martial_arts.sub),
-            ].filter(Boolean),
-            inner_ways: profile.loadout.inner_ways.map(named),
-            mystic_skills: profile.loadout.mystic_skills.map(named),
-            equipment: profile.loadout.equipment.map((item) => ({
-              name: named(item),
-              stars: item.star,
-              level: item.level,
-            })),
-          },
+          build: wants('build')
+            ? profile.loadout && {
+                martial_arts: [
+                  named(profile.loadout.martial_arts.main),
+                  named(profile.loadout.martial_arts.sub),
+                ].filter(Boolean),
+                inner_ways: profile.loadout.inner_ways.map(named),
+                mystic_skills: profile.loadout.mystic_skills.map(named),
+                gear_sets: gearSets(gear),
+              }
+            : undefined,
+          gear:
+            wants('gear') && profile.loadout
+              ? {
+                  sets: gearSets(gear),
+                  stat_totals: gearTotals(gear),
+                  note: 'Totals cover worn gear only, not the full character sheet.',
+                  items: gear.map(shapeGear),
+                }
+              : undefined,
           cohort:
             cohort &&
             (cohort.id
