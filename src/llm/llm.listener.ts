@@ -37,7 +37,7 @@ export class LLMListener {
     if (!enabled) return;
     if (typeof enabled === 'string') {
       const role = await message.guild.roles.fetch(enabled);
-      if (!role?.members.has(message.author.id)) return;
+      if (!message.member || !role?.members.has(message.member.id)) return;
     }
 
     this.#conversations ??= new Conversations<Message>(botId, (m) =>
@@ -62,6 +62,7 @@ export class LLMListener {
         },
         history: await conversations.historyFor(message),
       });
+      clearInterval(typing);
       if (result?.answer.trim()) {
         const sent = await this.#reply(message, result.answer.trim());
         if (sent) conversations.remember(sent.id, result.turns);

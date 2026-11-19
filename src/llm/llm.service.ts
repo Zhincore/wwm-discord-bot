@@ -98,18 +98,22 @@ export class LLMService {
       const character = await this.askerResolver
         ?.resolve(asker.id)
         .catch(() => undefined);
-      const turn = formatUserTurn({ name: asker.name, character }, text);
+      const [note, turn] = formatUserTurn(
+        { name: asker.name, character },
+        text,
+      );
       const timeout = AbortSignal.timeout(TIMEOUT);
 
       const answer = await this.#agent.run(turn.content, {
         instructions: getInstructions(GUILD_NAME, LLM_CONTEXT),
-        history,
+        history: [...history, note],
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       if (answer.trim().toUpperCase() === 'SKIP') return;
 
       const turns: Turn[] = [
         ...history,
+        note,
         turn,
         { role: 'assistant', content: answer },
       ];

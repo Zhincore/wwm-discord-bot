@@ -42,7 +42,7 @@ export interface ToolAgentOptions {
 
 /** One earlier message of a conversation */
 export interface Turn {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
@@ -89,15 +89,12 @@ export class ToolAgent {
     const { request } = this.options;
     const models = [this.options.model].flat();
     const maxIterations = this.options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
-    const input: InputItem[] = [
-      ...history.map(({ role, content }) => ({ role, content })),
-      { role: 'user', content: prompt },
-    ];
+    const input: InputItem[] = [...history, { role: 'user', content: prompt }];
 
     for (let i = 0; i < maxIterations; i++) {
       const last = i === maxIterations - 1;
       if (last && i > 0)
-        input.push({ role: 'user', content: FINAL_TURN_NOTICE });
+        input.push({ role: 'system', content: FINAL_TURN_NOTICE });
       const result = await this.llm.responses.send(
         {
           responsesRequest: {

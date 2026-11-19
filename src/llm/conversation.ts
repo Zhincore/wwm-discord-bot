@@ -22,17 +22,34 @@ export interface ChainMessage {
   fetchReference(): Promise<ChainMessage>;
 }
 
-/** A user message as the model sees it: speaker label, then the text. */
-export function formatUserTurn(asker: Omit<Asker, 'id'>, text: string): Turn {
+/** System note naming who wrote the user message that follows it. */
+export function speakerNote(asker: Omit<Asker, 'id'>): Turn {
   const character = asker.character
-    ? ` | character: ${asker.character.name}, UID ${asker.character.uid}`
-    : '';
-  return { role: 'user', content: `[${asker.name}${character}] ${text}` };
+    ? `Their game character is "${asker.character.name}" (UID ${asker.character.uid}).`
+    : 'They have no linked game character.';
+  return {
+    role: 'system',
+    content: `The next message is from Discord user "${asker.name}". ${character}`,
+  };
 }
 
-/** Keep the newest turns and bound each one's length. */
+/** A user message as the model sees it: the speaker note, then the plain text. */
+export function formatUserTurn(
+  asker: Omit<Asker, 'id'>,
+  text: string,
+): [note: Turn, message: Turn] {
+  return [speakerNote(asker), { role: 'user', content: text }];
+}
+
+/** Keep the newest messages with their speaker notes and bound each one's length. */
 export function trimHistory(turns: readonly Turn[]): Turn[] {
-  return turns.slice(-MAX_TURNS).map(({ role, content }) => ({
+  let start = turns.length;
+  let messages = 0;
+  for (let i = turns.length - 1; i >= 0; i--) {
+    if (turns[i]!.role !== 'system' && ++messages > MAX_TURNS) break;
+    start = i;
+  }
+  return turns.slice(start).map(({ role, content }) => ({
     role,
     content:
       content.length > MAX_TURN_LENGTH
@@ -77,16 +94,19 @@ export class Conversations<Message extends ChainMessage = ChainMessage> {
   /** Follow the reply chain upwards from `newest`, oldest turn first. */
   async #walk(newest: Message): Promise<Turn[]> {
     const turns: Turn[] = [];
+    let messages = 0;
     let current: Message | undefined = newest;
     while (current) {
       const text = this.readText(current);
       if (!text) break;
-      turns.unshift(
-        current.author.id === this.botId
-          ? { role: 'assistant', content: text }
-          : formatUserTurn({ name: current.author.displayName }, text),
-      );
-      if (turns.length >= MAX_TURNS) break;
+      if (current.author.id === this.botId) {
+        turns.unshift({ role: 'assistant', content: text });
+      } else {
+        turns.unshift(
+          ...formatUserTurn({ name: current.author.displayName }, text),
+        );
+      }
+      if (++messages >= MAX_TURNS) break;
       current = await this.#referenced(current);
     }
     return trimHistory(turns);

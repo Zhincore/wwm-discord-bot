@@ -34,17 +34,17 @@ describe('ToolAgent', () => {
   it('sends history before the prompt and returns only the final text', async () => {
     const { llm, requests } = stubClient([message('second answer')]);
     const agent = new ToolAgent(llm, { model: 'm', tools: [add] });
-    const answer = await agent.run('[Ann] and now?', {
-      history: [
-        { role: 'user', content: '[Ann] first' },
-        { role: 'assistant', content: 'first answer' },
-      ],
-    });
+    const history = [
+      { role: 'system' as const, content: 'speaker: Ann' },
+      { role: 'user' as const, content: 'first' },
+      { role: 'assistant' as const, content: 'first answer' },
+      { role: 'system' as const, content: 'speaker: Bob' },
+    ];
+    const answer = await agent.run('and now?', { history });
     expect(answer).toBe('second answer');
     expect(requests[0].input).toEqual([
-      { role: 'user', content: '[Ann] first' },
-      { role: 'assistant', content: 'first answer' },
-      { role: 'user', content: '[Ann] and now?' },
+      ...history,
+      { role: 'user', content: 'and now?' },
     ]);
   });
 
