@@ -1,4 +1,4 @@
-import { Layout } from "#common/views/Layout.js";
+import { Layout } from '#common/views/Layout.js';
 
 interface SuccessProps {
   nickname: string;

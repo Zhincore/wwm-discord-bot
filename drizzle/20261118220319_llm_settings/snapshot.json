@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "66e0c1f8-84fc-4f6c-81ac-7feb248ab61f",
-  "prevIds": [
-    "4aa9ebd7-bcd2-4b96-804b-a0b2af89f3f3"
-  ],
+  "prevIds": ["4aa9ebd7-bcd2-4b96-804b-a0b2af89f3f3"],
   "ddl": [
     {
       "name": "codes",
@@ -221,64 +219,49 @@
       "table": "guild_llm_whitelist"
     },
     {
-      "columns": [
-        "kind",
-        "id"
-      ],
+      "columns": ["kind", "id"],
       "nameExplicit": false,
       "name": "game_data_pk",
       "entityType": "pks",
       "table": "game_data"
     },
     {
-      "columns": [
-        "guildId"
-      ],
+      "columns": ["guildId"],
       "nameExplicit": false,
       "name": "codes_pk",
       "table": "codes",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "key"
-      ],
+      "columns": ["key"],
       "nameExplicit": false,
       "name": "app_state_pk",
       "table": "app_state",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "name"
-      ],
+      "columns": ["name"],
       "nameExplicit": false,
       "name": "game_data_emojis_pk",
       "table": "game_data_emojis",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "game_profiles_pk",
       "table": "game_profiles",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "guildId"
-      ],
+      "columns": ["guildId"],
       "nameExplicit": false,
       "name": "guild_llm_whitelist_pk",
       "table": "guild_llm_whitelist",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "memberId"
-      ],
+      "columns": ["memberId"],
       "nameExplicit": false,
       "name": "game_profiles_memberId_unique",
       "entityType": "uniques",

@@ -1,5 +1,6 @@
-import type { Children, PropsWithChildren } from "@kitajs/html";
-import safeCss from "./layout.css" with { type: "text" };
+import type { Children, PropsWithChildren } from '@kitajs/html';
+
+import safeCss from './layout.css' with { type: 'text' };
 
 export interface LayoutProps {
   title: string;
@@ -13,7 +14,7 @@ export function Layout({
 }: PropsWithChildren<LayoutProps>) {
   return (
     <>
-      {"<!DOCTYPE html>"}
+      {'<!DOCTYPE html>'}
       <html>
         <head>
           <meta charset="utf-8" />

@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "af932c01-5884-4605-b0d3-6ae318a194d3",
-  "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
-  ],
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "ddl": [
     {
       "name": "codes",
@@ -67,18 +65,14 @@
     {
       "table": "codes",
       "name": "codes_pk",
-      "columns": [
-        "guildId"
-      ],
+      "columns": ["guildId"],
       "nameExplicit": false,
       "entityType": "pks"
     },
     {
       "table": "app_state",
       "name": "app_state_pk",
-      "columns": [
-        "key"
-      ],
+      "columns": ["key"],
       "nameExplicit": false,
       "entityType": "pks"
     }

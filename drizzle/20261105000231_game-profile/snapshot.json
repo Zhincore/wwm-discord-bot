@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "56f1b171-1d54-436b-a42a-874e529d19ba",
-  "prevIds": [
-    "af932c01-5884-4605-b0d3-6ae318a194d3"
-  ],
+  "prevIds": ["af932c01-5884-4605-b0d3-6ae318a194d3"],
   "ddl": [
     {
       "name": "codes",
@@ -111,36 +109,28 @@
     {
       "table": "codes",
       "name": "codes_pk",
-      "columns": [
-        "guildId"
-      ],
+      "columns": ["guildId"],
       "nameExplicit": false,
       "entityType": "pks"
     },
     {
       "table": "app_state",
       "name": "app_state_pk",
-      "columns": [
-        "key"
-      ],
+      "columns": ["key"],
       "nameExplicit": false,
       "entityType": "pks"
     },
     {
       "table": "game_profiles",
       "name": "game_profiles_pk",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
     {
       "table": "game_profiles",
       "name": "game_profiles_memberId_unique",
-      "columns": [
-        "memberId"
-      ],
+      "columns": ["memberId"],
       "nameExplicit": false,
       "entityType": "uniques"
     }

@@ -319,14 +319,21 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'guild_info',
       description:
-        'Get a summary of one guild: level, funds, number of members, how many are online, and the guild notice. Use for general questions about a guild. Leave guild out for our own guild.',
+        'Get a summary of one guild: level, experience and how much the next level needs, funds, fame, activity, founding date, number of members, how many are online, and the guild notice. Use for general questions about a guild. Leave guild out for our own guild.',
       schema: z.object({ guild: guildParam }),
       execute: ({ guild }) =>
         guildPart('base', guild, ({ base }) => ({
           name: base.name,
           id: base.id,
           level: base.level,
+          exp: base.exp,
+          exp_needed_for_next_level: base.exp_needed,
           funds: base.fund,
+          funds_earned_total: base.total_fund,
+          fame: base.fame,
+          fame_this_week: base.week_fame,
+          activity: base.liveness,
+          founded: base.create_ts ? formatTime(base.create_ts) : undefined,
           members: base.member_count,
           online: base.online_count,
           notice: base.notice || undefined,
@@ -571,7 +578,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'find_player',
       description:
-        'Look up one player by name or numeric UID. Returns level, sect, and whether they are online or when they were last seen. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, cohort for their cohort members.',
+        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, cohort for their cohort members.',
       schema: z.object({
         player: z
           .string()
@@ -632,6 +639,19 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           level: profile.level,
           sect: named(profile.sect),
           status: presence(profile),
+          play_time_hours: profile.online_time
+            ? Math.round(profile.online_time / 3600)
+            : undefined,
+          character_created: profile.created_ts
+            ? formatTime(profile.created_ts)
+            : undefined,
+          world_level: profile.world_level,
+          mastery: profile.mastery
+            ? Math.round(profile.mastery)
+            : undefined,
+          achievements: profile.achievements
+            ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
+            : undefined,
           guild: profile.guild && {
             name: profile.guild.name ?? 'not in a guild',
             id: profile.guild.id,

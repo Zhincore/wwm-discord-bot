@@ -22,24 +22,32 @@ export type Pid = string;
 export type Uid = string;
 export type Timestamp = number;
 export type GameData = unknown;
-export interface ApiError { detail: string }
+export interface ApiError {
+  detail: string;
+}
 
 // ---------------------------------------------------------------------------------------------
 // REST endpoints
 // ---------------------------------------------------------------------------------------------
 
 export interface Endpoints {
-  "GET /status": { response: Status };
+  'GET /status': { response: Status };
   // The next seven routes are DEV ONLY (403 unless the server runs with WWM_DEV=1).
-  "GET /window": { response: WindowInfo[] };
+  'GET /window': { response: WindowInfo[] };
   /** PNG image. `region` = "x,y,w,h"; `scale` in (0, 1]. */
-  "GET /screenshot.png": { query: { region?: string; scale?: number }; /** PNG bytes */ response: ArrayBuffer };
-  "POST /click": { body: ClickRequest; response: Ok };
-  "POST /move": { body: { x: number; y: number }; response: Ok };
+  'GET /screenshot.png': {
+    query: { region?: string; scale?: number };
+    /** PNG bytes */ response: ArrayBuffer;
+  };
+  'POST /click': { body: ClickRequest; response: Ok };
+  'POST /move': { body: { x: number; y: number }; response: Ok };
   /** `keys`: xdotool keysyms, space separated (e.g. "Escape", "ctrl+a"). */
-  "POST /key": { body: { keys: string; delay_ms?: number }; response: Ok };
-  "POST /type": { body: { text: string; delay_ms?: number }; response: Ok };
-  "POST /scroll": { body: { x: number; y: number; clicks?: number }; response: Ok };
+  'POST /key': { body: { keys: string; delay_ms?: number }; response: Ok };
+  'POST /type': { body: { text: string; delay_ms?: number }; response: Ok };
+  'POST /scroll': {
+    body: { x: number; y: number; clicks?: number };
+    response: Ok;
+  };
 
   /** Run a command of the in-game Lua loader. `timeout: 0` returns `{ id }` without waiting. */
   /**
@@ -47,7 +55,10 @@ export interface Endpoints {
    * For a specific request `R` the response is `CommandResultOf<R>` (or `{ id }` with `timeout: 0`).
    * Production code uses the purpose-named routes below instead.
    */
-  "POST /cmd": { body: CommandRequest; response: AnyCommandResult | { id: number } };
+  'POST /cmd': {
+    body: CommandRequest;
+    response: AnyCommandResult | { id: number };
+  };
   /**
    * Server-sent event stream (`text/event-stream`). Every message has `id` = the event's `seq` and
    * `data` = one `BridgeEvent` as JSON; comment lines (`: keep-alive`) arrive every 10 s when idle.
@@ -58,13 +69,16 @@ export interface Endpoints {
    * Command results are never sent on the stream. `token` = the API token, for clients that cannot
    * send the Authorization header.
    */
-  "GET /events": { query: { since?: number; token?: string } & Record<string, string | number>; /** one per SSE message */ response: BridgeEvent };
+  'GET /events': {
+    query: { since?: number; token?: string } & Record<string, string | number>;
+    /** one per SSE message */ response: BridgeEvent;
+  };
 
-  "GET /guild": { response: GuildSnapshot | NoGuild };
-  "GET /guild/base": { response: GuildPart<"base"> | NoGuild };
-  "GET /guild/members": { response: GuildPart<"members"> | NoGuild };
-  "GET /guild/events": { response: GuildPart<"events"> | NoGuild };
-  "GET /guild/log": { response: GuildPart<"log"> | NoGuild };
+  'GET /guild': { response: GuildSnapshot | NoGuild };
+  'GET /guild/base': { response: GuildPart<'base'> | NoGuild };
+  'GET /guild/members': { response: GuildPart<'members'> | NoGuild };
+  'GET /guild/events': { response: GuildPart<'events'> | NoGuild };
+  'GET /guild/log': { response: GuildPart<'log'> | NoGuild };
 
   /**
    * Any guild, fetched live and cached for 2 minutes: `guild` = its public numeric guild ID
@@ -76,21 +90,30 @@ export interface Endpoints {
    * Find guilds by name. The game matches whole words: "Lamy" finds "CZ-Lamy", "LamyCZ" finds
    * nothing. Results are sorted by member count; use `id` with `GET /guilds/{id}`.
    */
-  "GET /guilds": { query: { name: string; limit?: number }; response: { results: GuildSearchResult[] } };
-  "GET /guilds/{guild}": { query: { hostnum?: number; refresh?: boolean }; response: GuildSnapshot & { hostnum: number } };
-  "GET /guilds/{guild}/{part}": { query: { hostnum?: number; refresh?: boolean }; response: GuildPart<keyof GuildParts> & { hostnum: number } };
+  'GET /guilds': {
+    query: { name: string; limit?: number };
+    response: { results: GuildSearchResult[] };
+  };
+  'GET /guilds/{guild}': {
+    query: { hostnum?: number; refresh?: boolean };
+    response: GuildSnapshot & { hostnum: number };
+  };
+  'GET /guilds/{guild}/{part}': {
+    query: { hostnum?: number; refresh?: boolean };
+    response: GuildPart<keyof GuildParts> & { hostnum: number };
+  };
 
   /** Poll the guild now instead of waiting for the next 60 s tick; changes arrive on the event stream. */
-  "POST /guild/refresh": { response: RefreshStatus };
+  'POST /guild/refresh': { response: RefreshStatus };
   /** Check Guild War data now; changes arrive on the event stream. */
-  "POST /guildwar/refresh": { response: RefreshStatus };
+  'POST /guildwar/refresh': { response: RefreshStatus };
 
-  "GET /guildwar": { response: GuildWarSnapshot };
-  "GET /guildwar/league": { response: GuildWarPart<"league"> };
-  "GET /guildwar/matchmaking": { response: GuildWarPart<"matchmaking"> };
-  "GET /guildwar/matches": { response: GuildWarPart<"matches"> };
-  "GET /guildwar/signups": { response: GuildWarPart<"signups"> };
-  "GET /guildwar/schedule": { response: GuildWarPart<"schedule"> };
+  'GET /guildwar': { response: GuildWarSnapshot };
+  'GET /guildwar/league': { response: GuildWarPart<'league'> };
+  'GET /guildwar/matchmaking': { response: GuildWarPart<'matchmaking'> };
+  'GET /guildwar/matches': { response: GuildWarPart<'matches'> };
+  'GET /guildwar/signups': { response: GuildWarPart<'signups'> };
+  'GET /guildwar/schedule': { response: GuildWarPart<'schedule'> };
 
   /**
    * `who`: exact player name, numeric player ID (`uid`), or a Pid (a bare Pid of a player outside
@@ -99,20 +122,35 @@ export interface Endpoints {
    * linked accounts, card. Add groups with `include` (comma-separated `PlayerInclude`), raw game
    * sections with `sections` (comma-separated `PlayerSection`, returned under `sections`).
    */
-  "GET /player/{who}": {
-    query: { hostnum?: number; include?: string; sections?: string; refresh?: boolean };
+  'GET /player/{who}': {
+    query: {
+      hostnum?: number;
+      include?: string;
+      sections?: string;
+      refresh?: boolean;
+    };
     response: PlayerProfile;
   };
   /** The player's cohort (sworn group) with its members resolved. One extra game request. */
-  "GET /player/{who}/cohort": { query: { hostnum?: number; refresh?: boolean }; response: PlayerCohort };
+  'GET /player/{who}/cohort': {
+    query: { hostnum?: number; refresh?: boolean };
+    response: PlayerCohort;
+  };
   /** The player's mentor ties with students resolved. One extra game request. */
-  "GET /player/{who}/mentor": { query: { hostnum?: number; refresh?: boolean }; response: PlayerMentor };
+  'GET /player/{who}/mentor': {
+    query: { hostnum?: number; refresh?: boolean };
+    response: PlayerMentor;
+  };
 }
 
-export interface Ok { ok: true }
+export interface Ok {
+  ok: true;
+}
 
 /** `status`: what the script did, e.g. "polling", "busy", "ok", "no guild", "not in world". */
-export interface RefreshStatus { status?: string }
+export interface RefreshStatus {
+  status?: string;
+}
 
 export interface Status {
   uptime_s: number;
@@ -149,54 +187,104 @@ export interface ClickRequest {
 // ---------------------------------------------------------------------------------------------
 
 export type CommandRequest =
-  | { cmd: "ping"; args?: {}; timeout?: number }
-  | { cmd: "eval"; args: { code: string }; timeout?: number }
-  | { cmd: "perf"; args: { fps?: number; ui_only?: boolean }; timeout?: number }
-  | { cmd: "quit"; args?: {}; timeout?: number }
-  | { cmd: "guild"; args?: { part?: "all" | keyof GuildParts }; timeout?: number }
-  | { cmd: "guild_refresh"; args?: {}; timeout?: number }
-  | { cmd: "guild_search"; args: { name: string; limit?: number }; timeout?: number }
-  | { cmd: "guild_lookup"; args: { guild: string; hostnum?: number; part?: "all" | keyof GuildParts; refresh?: boolean }; timeout?: number }
-  | { cmd: "guildwar"; args?: { part?: "all" | keyof GuildWarParts }; timeout?: number }
-  | { cmd: "guildwar_refresh"; args?: {}; timeout?: number }
-  | { cmd: "player"; args: { who: string; hostnum?: number; include?: (PlayerInclude | "cohort" | "mentor")[]; sections?: PlayerSection[]; refresh?: boolean }; timeout?: number };
+  | { cmd: 'ping'; args?: {}; timeout?: number }
+  | { cmd: 'eval'; args: { code: string }; timeout?: number }
+  | { cmd: 'perf'; args: { fps?: number; ui_only?: boolean }; timeout?: number }
+  | { cmd: 'quit'; args?: {}; timeout?: number }
+  | {
+      cmd: 'guild';
+      args?: { part?: 'all' | keyof GuildParts };
+      timeout?: number;
+    }
+  | { cmd: 'guild_refresh'; args?: {}; timeout?: number }
+  | {
+      cmd: 'guild_search';
+      args: { name: string; limit?: number };
+      timeout?: number;
+    }
+  | {
+      cmd: 'guild_lookup';
+      args: {
+        guild: string;
+        hostnum?: number;
+        part?: 'all' | keyof GuildParts;
+        refresh?: boolean;
+      };
+      timeout?: number;
+    }
+  | {
+      cmd: 'guildwar';
+      args?: { part?: 'all' | keyof GuildWarParts };
+      timeout?: number;
+    }
+  | { cmd: 'guildwar_refresh'; args?: {}; timeout?: number }
+  | {
+      cmd: 'player';
+      args: {
+        who: string;
+        hostnum?: number;
+        include?: (PlayerInclude | 'cohort' | 'mentor')[];
+        sections?: PlayerSection[];
+        refresh?: boolean;
+      };
+      timeout?: number;
+    };
 
 /** Name of every command. */
-export type CommandName = CommandRequest["cmd"];
+export type CommandName = CommandRequest['cmd'];
 
 /**
  * `data` of a successful result for a given request. Follows `args.part` for `guild` / `guildwar`:
  * `CommandData<{ cmd: "guild"; args: { part: "members" } }>` is `GuildPart<"members"> | NoGuild`.
  */
 export type CommandData<R extends { cmd: CommandName; args?: unknown }> =
-  R extends { cmd: "ping" } ? "pong"
-  : R extends { cmd: "eval" } ? unknown
-  : R extends { cmd: "perf" } ? { fps: number; ui_only: boolean }
-  : R extends { cmd: "quit" } ? { logout: boolean }
-  : R extends { cmd: "guild_refresh" | "guildwar_refresh" } ? string
-  : R extends { cmd: "guild_search" } ? { results: GuildSearchResult[] }
-  : R extends { cmd: "guild_lookup" } ? (GuildSnapshot | GuildPart<keyof GuildParts>) & { hostnum: number }
-  : R extends { cmd: "player" } ? PlayerProfile
-  : R extends { cmd: "guild" } ? (
-      R extends { args: { part: infer P } }
-        ? (P extends keyof GuildParts ? GuildPart<P> : GuildSnapshot) | NoGuild
-        : GuildSnapshot | NoGuild)
-  : R extends { cmd: "guildwar" } ? (
-      R extends { args: { part: infer P } }
-        ? (P extends keyof GuildWarParts ? GuildWarPart<P> : GuildWarSnapshot)
-        : GuildWarSnapshot)
-  : unknown;
+  R extends { cmd: 'ping' }
+    ? 'pong'
+    : R extends { cmd: 'eval' }
+      ? unknown
+      : R extends { cmd: 'perf' }
+        ? { fps: number; ui_only: boolean }
+        : R extends { cmd: 'quit' }
+          ? { logout: boolean }
+          : R extends { cmd: 'guild_refresh' | 'guildwar_refresh' }
+            ? string
+            : R extends { cmd: 'guild_search' }
+              ? { results: GuildSearchResult[] }
+              : R extends { cmd: 'guild_lookup' }
+                ? (GuildSnapshot | GuildPart<keyof GuildParts>) & {
+                    hostnum: number;
+                  }
+                : R extends { cmd: 'player' }
+                  ? PlayerProfile
+                  : R extends { cmd: 'guild' }
+                    ? R extends { args: { part: infer P } }
+                      ?
+                          | (P extends keyof GuildParts
+                              ? GuildPart<P>
+                              : GuildSnapshot)
+                          | NoGuild
+                      : GuildSnapshot | NoGuild
+                    : R extends { cmd: 'guildwar' }
+                      ? R extends { args: { part: infer P } }
+                        ? P extends keyof GuildWarParts
+                          ? GuildWarPart<P>
+                          : GuildWarSnapshot
+                        : GuildWarSnapshot
+                      : unknown;
 
 /** Result message of a command: `ok: true` carries `data`, `ok: false` carries `error`. */
 export type CommandResult<T = unknown, C extends string = string> =
-  | { ev: "result"; id: number; cmd: C; ok: true; data: T }
-  | { ev: "result"; id: number; cmd: C; ok: false; error: string };
+  | { ev: 'result'; id: number; cmd: C; ok: true; data: T }
+  | { ev: 'result'; id: number; cmd: C; ok: false; error: string };
 
 /** Result of one specific `POST /cmd` request, e.g. `CommandResultOf<{ cmd: "player"; args: { who: string } }>`. */
-export type CommandResultOf<R extends { cmd: CommandName; args?: unknown }> = CommandResult<CommandData<R>, R["cmd"]>;
+export type CommandResultOf<R extends { cmd: CommandName; args?: unknown }> =
+  CommandResult<CommandData<R>, R['cmd']>;
 
 /** Any command result, discriminated by `cmd` (then by `ok`): narrowing on `cmd` types `data`. */
-export type AnyCommandResult = { [C in CommandName]: CommandResult<CommandData<{ cmd: C }>, C> }[CommandName];
+export type AnyCommandResult = {
+  [C in CommandName]: CommandResult<CommandData<{ cmd: C }>, C>;
+}[CommandName];
 
 // ---------------------------------------------------------------------------------------------
 // Guild
@@ -215,7 +303,9 @@ export interface GuildSearchResult {
 }
 
 /** The bot's character is not in a guild. */
-export interface NoGuild { club: false }
+export interface NoGuild {
+  club: false;
+}
 
 export interface GuildParts {
   base: GuildBase;
@@ -233,14 +323,20 @@ export interface GuildSnapshot extends GuildParts {
   club_id: string;
 }
 
-export type GuildPart<K extends keyof GuildParts> = { updated: Timestamp; club_id: string } & Pick<GuildParts, K>;
+export type GuildPart<K extends keyof GuildParts> = {
+  updated: Timestamp;
+  club_id: string;
+} & Pick<GuildParts, K>;
 
 export interface GuildBase {
   /** public numeric guild ID, as used by `GET /guilds/{id}` */
   id?: number;
   name?: string;
   level?: number;
+  /** guild experience points */
   exp?: number;
+  /** experience the current level asks for before the next level; absent at the top level */
+  exp_needed?: number;
   fund?: number;
   total_fund?: number;
   daily_fund?: number;
@@ -308,14 +404,33 @@ export interface GuildPlaySlot {
 
 /** Every guild log entry type the game defines (event_id 1-27, in this order). */
 export type GuildLogKind =
-  | "member_joined" | "member_left" | "member_kicked" | "member_approved" | "member_invited"
-  | "rank_appointed" | "rank_removed" | "leader_transferred" | "leader_auto_transferred"
-  | "guild_level_up" | "building_level_up" | "low_funds_warning"
-  | "party_autostart_on" | "showdown_rescheduled" | "breaking_army_rescheduled"
-  | "party_autostart_off" | "party_autostart_off_maintenance"
-  | "showdown_rescheduled_maintenance" | "breaking_army_rescheduled_maintenance"
-  | "league_qualified" | "league_placement" | "league_round_end" | "league_season_end"
-  | "layout_applied" | "layout_cleared" | "skyward_bond_record" | "competition_first_place";
+  | 'member_joined'
+  | 'member_left'
+  | 'member_kicked'
+  | 'member_approved'
+  | 'member_invited'
+  | 'rank_appointed'
+  | 'rank_removed'
+  | 'leader_transferred'
+  | 'leader_auto_transferred'
+  | 'guild_level_up'
+  | 'building_level_up'
+  | 'low_funds_warning'
+  | 'party_autostart_on'
+  | 'showdown_rescheduled'
+  | 'breaking_army_rescheduled'
+  | 'party_autostart_off'
+  | 'party_autostart_off_maintenance'
+  | 'showdown_rescheduled_maintenance'
+  | 'breaking_army_rescheduled_maintenance'
+  | 'league_qualified'
+  | 'league_placement'
+  | 'league_round_end'
+  | 'league_season_end'
+  | 'layout_applied'
+  | 'layout_cleared'
+  | 'skyward_bond_record'
+  | 'competition_first_place';
 
 export interface GuildLogEntry {
   /** log category: 1 Members, 2 Promotion, 3 Construction, 4 Events, 5 Guild War, 6 Fun Competition */
@@ -353,7 +468,10 @@ export interface GuildWarSnapshot extends GuildWarParts {
   club_id: string;
 }
 
-export type GuildWarPart<K extends keyof GuildWarParts> = { updated: Timestamp; club_id: string } & Pick<GuildWarParts, K>;
+export type GuildWarPart<K extends keyof GuildWarParts> = {
+  updated: Timestamp;
+  club_id: string;
+} & Pick<GuildWarParts, K>;
 
 /** Upcoming Guild War times; league and matchmaking share the same days and start. */
 export interface GuildWarSchedule {
@@ -411,7 +529,7 @@ export interface GuildWarMatchmaking {
   match_found_ts?: Timestamp;
 }
 
-export type GuildWarMode = "matchmaking" | "league" | "invite" | number;
+export type GuildWarMode = 'matchmaking' | 'league' | 'invite' | number;
 
 export interface GuildWarMatch {
   /** unique match id */
@@ -462,40 +580,112 @@ export interface GuildWarPlayer {
 }
 
 export interface GuildWarSignupDay {
-  applicants: { pid: Pid; uid?: Uid; name?: string; account?: string; apply_ts?: Timestamp }[];
-  teams: { index: number; name?: string; members: { pid: Pid; uid?: Uid; name?: string; slot: number }[] }[];
+  applicants: {
+    pid: Pid;
+    uid?: Uid;
+    name?: string;
+    account?: string;
+    apply_ts?: Timestamp;
+  }[];
+  teams: {
+    index: number;
+    name?: string;
+    members: { pid: Pid; uid?: Uid; name?: string; slot: number }[];
+  }[];
 }
 
 // ---------------------------------------------------------------------------------------------
 // Player
 // ---------------------------------------------------------------------------------------------
 
-export interface PlayerRef { pid: Pid; uid?: Uid; name?: string }
+export interface PlayerRef {
+  pid: Pid;
+  uid?: Uid;
+  name?: string;
+}
 
 /** Optional groups of `GET /player/{who}` (`?include=guild,pvp,build`). */
 export type PlayerInclude =
   /** `guild` + `guildwar`: contribution and Guild War join counts */
-  | "guild"
+  | 'guild'
   /** `pvp`: arena grade and record */
-  | "pvp"
+  | 'pvp'
   /** `loadout` (names resolved) + raw `build` / `equips`: skills and worn equipment; costs one more game request */
-  | "build";
+  | 'build';
 
 /**
  * Raw profile sections that carry real data for other players (everything else the game accepts
  * comes back as defaults). Any other section name is accepted too; unknown ones return nothing.
  */
 export type KnownPlayerSection =
-  | "achievement" | "activity" | "auto_recovery" | "baiye_season_simple_statics" | "base" | "battle_pass"
-  | "big_event" | "birthday" | "blind_box" | "boss_train" | "bp_data" | "chat" | "chiji" | "club"
-  | "combat_plan" | "compound" | "coop_score" | "disease" | "dorm" | "dungeon" | "eden" | "face_plan"
-  | "fashion" | "fight_shoulder" | "fishing" | "floatopia" | "friend" | "fxds" | "gameplay_trail"
-  | "goose_simulation" | "guijiedongku" | "guise" | "head" | "hoard_profiteer" | "homeland_oneday_master"
-  | "huiwu" | "identity" | "jieyi" | "kfc_battle" | "kongfu" | "latency_opt" | "lunjian" | "mentor"
-  | "mojin" | "monthly_pass" | "name_card" | "newspaper" | "oversea_season_subscribe" | "palace_crime"
-  | "pet" | "player_recommend" | "pve_competition" | "pvp_battle" | "pvp_room" | "pvp_world" | "ququs"
-  | "recall" | "region" | "ride" | "road_sign" | "school" | "shichen" | "snowman" | "space_room"
-  | "story_prop" | "tower_sys" | "xinfa" | "yankov";
+  | 'achievement'
+  | 'activity'
+  | 'auto_recovery'
+  | 'baiye_season_simple_statics'
+  | 'base'
+  | 'battle_pass'
+  | 'big_event'
+  | 'birthday'
+  | 'blind_box'
+  | 'boss_train'
+  | 'bp_data'
+  | 'chat'
+  | 'chiji'
+  | 'club'
+  | 'combat_plan'
+  | 'compound'
+  | 'coop_score'
+  | 'disease'
+  | 'dorm'
+  | 'dungeon'
+  | 'eden'
+  | 'face_plan'
+  | 'fashion'
+  | 'fight_shoulder'
+  | 'fishing'
+  | 'floatopia'
+  | 'friend'
+  | 'fxds'
+  | 'gameplay_trail'
+  | 'goose_simulation'
+  | 'guijiedongku'
+  | 'guise'
+  | 'head'
+  | 'hoard_profiteer'
+  | 'homeland_oneday_master'
+  | 'huiwu'
+  | 'identity'
+  | 'jieyi'
+  | 'kfc_battle'
+  | 'kongfu'
+  | 'latency_opt'
+  | 'lunjian'
+  | 'mentor'
+  | 'mojin'
+  | 'monthly_pass'
+  | 'name_card'
+  | 'newspaper'
+  | 'oversea_season_subscribe'
+  | 'palace_crime'
+  | 'pet'
+  | 'player_recommend'
+  | 'pve_competition'
+  | 'pvp_battle'
+  | 'pvp_room'
+  | 'pvp_world'
+  | 'ququs'
+  | 'recall'
+  | 'region'
+  | 'ride'
+  | 'road_sign'
+  | 'school'
+  | 'shichen'
+  | 'snowman'
+  | 'space_room'
+  | 'story_prop'
+  | 'tower_sys'
+  | 'xinfa'
+  | 'yankov';
 export type PlayerSection = KnownPlayerSection | (string & {});
 
 /** A player tied to a profile (cohort member, student). */
@@ -509,11 +699,16 @@ export interface RelatedPlayer {
   logout_ts?: Timestamp;
   /** cohort members: when they joined the group */
   join_ts?: Timestamp;
-  role?: "student";
+  role?: 'student';
 }
 
 /** Whose cohort / mentor ties these are. */
-export interface PlayerIdentity { uid?: Uid; name?: string; pid: Pid; hostnum: number }
+export interface PlayerIdentity {
+  uid?: Uid;
+  name?: string;
+  pid: Pid;
+  hostnum: number;
+}
 
 export interface PlayerCohort {
   player: PlayerIdentity;
@@ -533,7 +728,10 @@ export interface PlayerMentor {
 }
 
 /** A game id with its localised name; `name` is absent when the game has no text for the id. */
-export interface Named { id: number; name?: string }
+export interface Named {
+  id: number;
+  name?: string;
+}
 
 /** One rolled stat of an item. */
 export interface EquipmentAffix extends Named {
@@ -591,11 +789,24 @@ export interface PlayerProfile {
   online: boolean;
   login_ts?: Timestamp;
   logout_ts?: Timestamp;
-  /** total seconds online */
+  /** total play time in seconds, over the whole life of the character */
   online_time?: number;
+  /** world level (difficulty tier of the player's own world) */
+  world_level?: number;
+  /** the game's score for the player's strongest build (`max_xiuwei_kungfu`), which the game compares
+   *  against recommended values for arena and group content */
+  mastery?: number;
+  /** achievements completed, by the tier number the player card shows them under */
+  achievements?: Record<string, number>;
   /** As the game reports them: empty strings when not linked, or when the player's own settings
    *  keep them private (seen empty for a player who has them linked). */
-  linked: { steam?: string; discord_id?: string; discord_name?: string; xbox?: string; psn?: string };
+  linked: {
+    steam?: string;
+    discord_id?: string;
+    discord_name?: string;
+    xbox?: string;
+    psn?: string;
+  };
   card: { sign?: string; banner?: Named };
   avatar?: Named;
   /** raw avatar data: head id, back colour, frames, transform */
@@ -604,11 +815,29 @@ export interface PlayerProfile {
   build_hidden: boolean;
 
   /** include=guild. `id` / `name` absent when the player is in no guild. */
-  guild?: { id?: number; name?: string; club_id?: string; fund?: number; week_fund?: number; liveness?: number; total_liveness?: number };
+  guild?: {
+    id?: number;
+    name?: string;
+    club_id?: string;
+    fund?: number;
+    week_fund?: number;
+    liveness?: number;
+    total_liveness?: number;
+  };
   /** include=guild: Guild War join counters for `season` */
-  guildwar?: { season?: number; matchmaking_joins?: number; league_joins?: number; invite_joins?: number };
+  guildwar?: {
+    season?: number;
+    matchmaking_joins?: number;
+    league_joins?: number;
+    invite_joins?: number;
+  };
   /** include=pvp: 1v1 arena */
-  pvp?: { grade?: number; small_grade?: number; matches?: number; best_streak?: number };
+  pvp?: {
+    grade?: number;
+    small_grade?: number;
+    matches?: number;
+    best_streak?: number;
+  };
   /** include=build: the build with names resolved by the game (absent if the build was not returned) */
   loadout?: PlayerLoadout;
   /** include=build, raw: martial arts (kongfu), inner ways (xinfa), mystic skills (battle_qs), slot -> equip id, ... */
@@ -627,25 +856,32 @@ export interface PlayerProfile {
 export type BridgeEvent = { seq: number } & BridgeEventBody;
 
 export type BridgeEventBody =
-  | { ev: "bridge_connected" | "bridge_disconnected" | "hello" | "login_ui" | "enter_game" }
-  | { ev: "bad_line"; raw: string }
-  | { ev: "handler_error"; for: string; error: string }
+  | {
+      ev:
+        | 'bridge_connected'
+        | 'bridge_disconnected'
+        | 'hello'
+        | 'login_ui'
+        | 'enter_game';
+    }
+  | { ev: 'bad_line'; raw: string }
+  | { ev: 'handler_error'; for: string; error: string }
   /** Lua asked for an OS-level click; with `window` the coordinates are relative to that X window */
-  | { ev: "os_click"; x: number; y: number; window?: string }
-  | { ev: "os_clicked"; x: number; y: number; window?: string }
-  | { ev: "os_click_skipped"; window: string }
-  | { ev: "autologin"; phase: "authed" }
-  | { ev: "autologin"; phase: "confirm"; tag: string }
-  | { ev: "autologin"; phase: "failed"; reason: string }
-  | { ev: "perf"; ui_only: boolean; fps: number }
+  | { ev: 'os_click'; x: number; y: number; window?: string }
+  | { ev: 'os_clicked'; x: number; y: number; window?: string }
+  | { ev: 'os_click_skipped'; window: string }
+  | { ev: 'autologin'; phase: 'authed' }
+  | { ev: 'autologin'; phase: 'confirm'; tag: string }
+  | { ev: 'autologin'; phase: 'failed'; reason: string }
+  | { ev: 'perf'; ui_only: boolean; fps: number }
   /** a log line of the game scripts (also printed to the container log) */
-  | { ev: "log"; line: string }
+  | { ev: 'log'; line: string }
   | ChatEvent
   | GuildEvent
   | GuildWarEvent;
 
 export interface ChatEvent {
-  ev: "chat";
+  ev: 'chat';
   ts: Timestamp;
   /** channel code: "world", "club_chat" (guild), "near", "team", "private_chat", "system", ... */
   channel?: string;
@@ -672,21 +908,56 @@ export interface ChatEvent {
 }
 
 export type GuildEvent =
-  | { ev: "guild_updated"; updated: Timestamp; name?: string; first: boolean; member_count: number; online_count: number; fund?: number }
-  | { ev: "guild_updated"; club: false }
-  | { ev: "guild_member_joined"; pid: Pid; uid?: Uid; name?: string; level?: number; roles: string[] }
-  | { ev: "guild_member_left"; pid: Pid; uid?: Uid; name?: string }
-  | { ev: "guild_member_roles"; pid: Pid; uid?: Uid; name?: string; from: string[]; to: string[] }
-  | { ev: "guild_member_online"; pid: Pid; uid?: Uid; name?: string; online: boolean }
-  | { ev: "guild_funds"; fund?: number; delta: number; total_fund?: number }
-  | { ev: "guild_level"; from?: number; to?: number }
+  | {
+      ev: 'guild_updated';
+      updated: Timestamp;
+      name?: string;
+      first: boolean;
+      member_count: number;
+      online_count: number;
+      fund?: number;
+    }
+  | { ev: 'guild_updated'; club: false }
+  | {
+      ev: 'guild_member_joined';
+      pid: Pid;
+      uid?: Uid;
+      name?: string;
+      level?: number;
+      roles: string[];
+    }
+  | { ev: 'guild_member_left'; pid: Pid; uid?: Uid; name?: string }
+  | {
+      ev: 'guild_member_roles';
+      pid: Pid;
+      uid?: Uid;
+      name?: string;
+      from: string[];
+      to: string[];
+    }
+  | {
+      ev: 'guild_member_online';
+      pid: Pid;
+      uid?: Uid;
+      name?: string;
+      online: boolean;
+    }
+  | { ev: 'guild_funds'; fund?: number; delta: number; total_fund?: number }
+  | { ev: 'guild_level'; from?: number; to?: number }
   /** plain text; `notice` absent = announcement cleared */
-  | { ev: "guild_notice"; notice?: string }
-  | ({ ev: "guild_log" } & GuildLogEntry)
-  | { ev: "guild_play_state"; type: number; name?: string; from?: number; to?: number; start_ts?: Timestamp }
+  | { ev: 'guild_notice'; notice?: string }
+  | ({ ev: 'guild_log' } & GuildLogEntry)
+  | {
+      ev: 'guild_play_state';
+      type: number;
+      name?: string;
+      from?: number;
+      to?: number;
+      start_ts?: Timestamp;
+    }
   /** `guild_event_soon` fires 15 min before a scheduled slot, `guild_event_start` at its start */
   | {
-      ev: "guild_event_soon" | "guild_event_start";
+      ev: 'guild_event_soon' | 'guild_event_start';
       type: number;
       name?: string;
       start_ts: Timestamp;
@@ -699,19 +970,19 @@ export type GuildEvent =
 
 export type GuildWarEvent =
   /** the league opponent changed */
-  | ({ ev: "guildwar_opponent" } & GuildWarOpponent)
+  | ({ ev: 'guildwar_opponent' } & GuildWarOpponent)
   /** matchmaking found a match; the opponent is only known once the match is finished */
-  | { ev: "guildwar_match_found"; ts: Timestamp }
+  | { ev: 'guildwar_match_found'; ts: Timestamp }
   /** a finished match appeared in the history; `players` is our roster */
   | {
-      ev: "guildwar_match";
+      ev: 'guildwar_match';
       space_id: string;
       ts: Timestamp;
       mode: GuildWarMode;
       round?: number;
       win: boolean;
-      score: GuildWarMatch["score"];
-      enemy: GuildWarMatch["enemy"];
+      score: GuildWarMatch['score'];
+      enemy: GuildWarMatch['enemy'];
       players: GuildWarPlayer[];
       enemy_count: number;
     };

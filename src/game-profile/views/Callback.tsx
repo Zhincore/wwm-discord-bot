@@ -1,4 +1,4 @@
-import { Layout } from "#common/views/Layout.js";
+import { Layout } from '#common/views/Layout.js';
 
 const window = null as any;
 
@@ -7,7 +7,7 @@ function redirectJs() {
   const params = new URLSearchParams(hashValue);
 
   const url = new URL(window.location);
-  url.pathname = url.pathname.replace(/callback$/, "role");
+  url.pathname = url.pathname.replace(/callback$/, 'role');
   for (const [key, value] of params) {
     url.searchParams.set(key, value);
   }

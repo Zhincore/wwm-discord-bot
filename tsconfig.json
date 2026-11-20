@@ -39,6 +39,6 @@
     "incremental": true,
     "strictPropertyInitialization": false,
     "jsxImportSource": "@kitajs/html",
-    "plugins": [{ "name": "@kitajs/ts-html-plugin" }],
-  },
+    "plugins": [{ "name": "@kitajs/ts-html-plugin" }]
+  }
 }
