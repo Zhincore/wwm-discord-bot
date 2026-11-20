@@ -2,6 +2,7 @@ import { Inject, Injectable, Optional } from '@nestjs/common';
 import { OpenRouter } from '@openrouter/sdk';
 import type { Snowflake } from 'discord.js';
 import { eq, sql } from 'drizzle-orm';
+import * as z from 'zod';
 
 import { DatabaseService } from '#common/database/database.service.ts';
 import { GUILD_NAME, LLM_CONTEXT, LLM_MODELS } from '#consts.ts';
@@ -10,7 +11,7 @@ import { WwmService } from '#wwm/wwm.service.ts';
 import { formatUserTurn, type Asker } from './conversation';
 import { getInstructions } from './instructions';
 import { llmRoles } from './llm-settings.schema';
-import { ToolAgent, type Turn } from './tool-agent';
+import { defineTool, ToolAgent, type Turn } from './tool-agent';
 import { createWwmTools } from './wwm-tools';
 
 const TIMEOUT = 60_000;
@@ -57,7 +58,27 @@ export class LLMService {
       model: LLM_MODELS,
       maxIterations: 5,
       request: { toolChoice: 'auto', store: false, temperature: 0.5 },
-      tools: createWwmTools(wwm),
+      tools: [
+        ...createWwmTools(wwm),
+        defineTool({
+          name: 'format_number',
+          description: 'Formats number for better readability (e.g. 10 000)',
+          schema: z.object({
+            number: z.number().nonoptional().describe('The number to format'),
+            locale: z
+              .string()
+              .optional()
+              .describe('Optional user locale (cs, en_US, ...)'),
+          }),
+          execute: ({ number, locale }) => {
+            try {
+              return number.toLocaleString(locale);
+            } catch {
+              return number.toLocaleString();
+            }
+          },
+        }),
+      ],
     });
 
     const guildId = sql.placeholder('guildId');
