@@ -610,6 +610,8 @@ export type PlayerInclude =
   | 'guild'
   /** `pvp`: arena grade and record */
   | 'pvp'
+  /** `appearance`: owned outfit pieces, complete sets, fashion score */
+  | 'appearance'
   /** `loadout` (names resolved) + raw `build` / `equips`: skills and worn equipment; costs one more game request */
   | 'build';
 
@@ -837,6 +839,17 @@ export interface PlayerProfile {
     small_grade?: number;
     matches?: number;
     best_streak?: number;
+  };
+  /** include=appearance: what the player owns in the wardrobe */
+  appearance?: {
+    fashion_score?: number;
+    /** number of `items` */
+    count: number;
+    /** category name -> number of owned pieces; pieces without a category are not counted here */
+    by_category: Record<string, number>;
+    /** sets of which the player owns every piece (for their body type) */
+    sets: { id: number; name?: string }[];
+    items: { id: number; name?: string; category?: string; stars?: number }[];
   };
   /** include=build: the build with names resolved by the game (absent if the build was not returned) */
   loadout?: PlayerLoadout;

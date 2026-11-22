@@ -578,7 +578,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'find_player',
       description:
-        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, cohort for their cohort members.',
+        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, cohort for their cohort members.',
       schema: z.object({
         player: z
           .string()
@@ -586,7 +586,9 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             'Player name as the user wrote it, or numeric UID. Prefer the UID when you know it.',
           ),
         include: z
-          .array(z.enum(['guild', 'pvp', 'build', 'gear', 'cohort']))
+          .array(
+            z.enum(['guild', 'pvp', 'build', 'gear', 'appearance', 'cohort']),
+          )
           .optional()
           .describe('Extra groups to return; omit for the basic profile.'),
       }),
@@ -646,9 +648,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             ? formatTime(profile.created_ts)
             : undefined,
           world_level: profile.world_level,
-          mastery: profile.mastery
-            ? Math.round(profile.mastery)
-            : undefined,
+          mastery: profile.mastery ? Math.round(profile.mastery) : undefined,
           achievements: profile.achievements
             ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
             : undefined,
@@ -687,6 +687,14 @@ export function createWwmTools(wwm: WwmService): Tool[] {
                   items: gear.map(shapeGear),
                 }
               : undefined,
+          appearance: profile.appearance && {
+            fashion_score: profile.appearance.fashion_score,
+            pieces_owned: profile.appearance.count,
+            pieces_by_category: profile.appearance.by_category,
+            complete_sets: profile.appearance.sets.map(
+              (set) => set.name ?? `#${set.id}`,
+            ),
+          },
           cohort:
             cohort &&
             (cohort.id

@@ -166,6 +166,13 @@ function setup(overrides: Partial<Record<keyof WwmService, unknown>> = {}) {
       world_level: 17,
       mastery: 26222.4,
       achievements: { '1': 59, '2': 22, '3': 5 },
+      appearance: {
+        fashion_score: 1832,
+        count: 3,
+        by_category: { Outfit: 2, Hat: 1 },
+        sets: [{ id: 2, name: 'Heavenly Frost' }, { id: 9 }],
+        items: [{ id: 603001, name: 'Hairstyle 1' }],
+      },
       linked: { steam: 'steam-id', discord_id: 'discord-id' },
       card: {},
       build_hidden: false,
@@ -385,9 +392,12 @@ describe('createWwmTools', () => {
     const { run, wwm } = setup();
     const result = await run('find_player', {
       player: ' Brasshop ',
-      include: ['build', 'gear', 'cohort'],
+      include: ['build', 'gear', 'appearance', 'cohort'],
     });
-    expect(wwm.fetchPlayer).toHaveBeenCalledWith('Brasshop', ['build']);
+    expect(wwm.fetchPlayer).toHaveBeenCalledWith('Brasshop', [
+      'build',
+      'appearance',
+    ]);
     expect(wwm.fetchPlayerCohort).toHaveBeenCalledWith('Brasshop');
     expect(result).toMatchObject({
       name: 'Brasshop',
@@ -397,6 +407,12 @@ describe('createWwmTools', () => {
       world_level: 17,
       mastery: 26222,
       achievements: 86,
+      appearance: {
+        fashion_score: 1832,
+        pieces_owned: 3,
+        pieces_by_category: { Outfit: 2, Hat: 1 },
+        complete_sets: ['Heavenly Frost', '#9'],
+      },
       cohort: 'not in a cohort',
       guild: {
         name: 'Ours',
