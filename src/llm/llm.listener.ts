@@ -4,6 +4,7 @@ import { Context, On, type ContextOf } from 'necord';
 
 import { Conversations } from './conversation';
 import { BusyError, LLMService } from './llm.service';
+import { ToolLevel } from './tool-agent';
 
 const MESSAGE_LIMIT = 2000;
 const TYPING_INTERVAL = 8_000;
@@ -33,12 +34,20 @@ export class LLMListener {
     if (message.author.bot || !message.inGuild()) return;
     if (!message.mentions.users.has(botId)) return;
 
-    const enabled = this.service.isEnabled(message.guildId);
-    if (!enabled) return;
-    if (typeof enabled === 'string') {
-      const role = await message.guild.roles.fetch(enabled);
-      if (!message.member || !role?.members.has(message.member.id)) return;
+    const settings = this.service.getSettings(message.guildId);
+    if (!settings || !message.member) return;
+
+    let maxLevel: ToolLevel | undefined;
+    for (const level of Object.values(ToolLevel)) {
+      const roleId = settings[level];
+      if (!roleId) continue;
+
+      const role = await message.guild.roles.fetch(roleId);
+      if (!role?.members.has(message.member.id)) continue;
+
+      maxLevel = level;
     }
+    if (!maxLevel) return;
 
     this.#conversations ??= new Conversations<Message>(botId, (m) =>
       this.#text(m, botId),

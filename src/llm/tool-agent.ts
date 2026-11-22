@@ -7,15 +7,31 @@ import type {
 } from '@openrouter/sdk/models';
 import * as z from 'zod';
 
+import { FINAL_TURN_NOTICE } from './instructions';
+
+// Order matters!
+export enum ToolLevel {
+  /** Anyone can use this tool */
+  BASIC = 'BASIC',
+  /** Only authorized personel */
+  ADVANCED = 'ADVANCED',
+}
+
 type InputItem = Exclude<InputsUnion, string>[number];
 
 export interface Tool<Schema extends z.ZodObject = z.ZodObject> {
   name: string;
   description: string;
+  toolLevel: ToolLevel;
   /** Arguments object; validates model input and is advertised as JSON Schema */
   schema: Schema;
+  prepareSchema?: (schema: Schema, toolLevel: ToolLevel) => z.ZodObject;
   /** Result is sent back to the model; non-strings are JSON-encoded */
-  execute(args: z.output<Schema>, signal?: AbortSignal): unknown;
+  execute(
+    args: z.output<Schema>,
+    toolLevel: ToolLevel,
+    signal?: AbortSignal,
+  ): unknown;
 }
 
 /** Define a tool whose `execute` arguments are inferred from `schema`. */
@@ -28,7 +44,6 @@ export function defineTool<Schema extends z.ZodObject>(
 export interface ToolAgentOptions {
   /** One model, or several in order of preference: later ones are tried when an earlier one fails */
   model: string | readonly string[];
-  tools: readonly Tool[];
   /** Default system prompt */
   instructions?: string;
   /** Max model round-trips per run; the last one is sent without tools to force an answer */
@@ -52,29 +67,47 @@ export interface ToolAgentRunOptions {
   /** Earlier turns of the conversation, oldest first; sent before `prompt` */
   history?: readonly Turn[];
   signal?: AbortSignal;
+  toolLevel?: ToolLevel;
 }
 
 const DEFAULT_MAX_ITERATIONS = 10;
-const FINAL_TURN_NOTICE =
-  'Tools are no longer available. Do not request or write any tool call. ' +
-  'Answer now in plain text using only the results above; if they are insufficient, say what is missing.';
 
 /** Runs a model with client-side tools until it produces a final text answer. */
 export class ToolAgent {
-  readonly #tools: Map<string, Tool>;
-  readonly #definitions: NonNullable<ResponsesRequest['tools']>;
+  readonly #tools = new Map<ToolLevel, Map<string, Tool>>();
+  readonly #definitions = new Map<
+    ToolLevel,
+    NonNullable<ResponsesRequest['tools']>
+  >();
 
   constructor(
     private readonly llm: OpenRouter,
     private readonly options: ToolAgentOptions,
+    tools: readonly Tool[],
   ) {
-    this.#tools = new Map(options.tools.map((tool) => [tool.name, tool]));
-    this.#definitions = options.tools.map((tool) => ({
-      type: 'function',
-      name: tool.name,
-      description: tool.description,
-      parameters: z.toJSONSchema(tool.schema, { io: 'input' }),
-    }));
+    const toEntry = (tool: Tool) => [tool.name, tool] as const;
+    const toDefinition = (tool: Tool, level: ToolLevel) =>
+      ({
+        type: 'function',
+        name: tool.name,
+        description: tool.description,
+        parameters: z.toJSONSchema(
+          tool.prepareSchema?.(tool.schema, level) ?? tool.schema,
+          { io: 'input' },
+        ),
+      }) as const;
+
+    const levels = Object.values(ToolLevel);
+    for (const level of levels) {
+      const filtered = tools.filter(
+        (t) => levels.indexOf(t.toolLevel) <= levels.indexOf(level),
+      );
+      this.#tools.set(level, new Map(filtered.map(toEntry)));
+      this.#definitions.set(
+        level,
+        filtered.map((t) => toDefinition(t, level)),
+      );
+    }
   }
 
   /** Answer `prompt`, executing tool calls in between; returns only the final text. */
@@ -84,12 +117,14 @@ export class ToolAgent {
       instructions = this.options.instructions,
       history = [],
       signal,
+      toolLevel = ToolLevel.BASIC,
     }: ToolAgentRunOptions = {},
   ): Promise<string> {
     const { request } = this.options;
     const models = [this.options.model].flat();
     const maxIterations = this.options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
     const input: InputItem[] = [...history, { role: 'user', content: prompt }];
+    const tools = this.#definitions.get(toolLevel)!;
 
     for (let i = 0; i < maxIterations; i++) {
       const last = i === maxIterations - 1;
@@ -102,7 +137,7 @@ export class ToolAgent {
             provider: { requireParameters: true, ...request?.provider },
             ...(models.length > 1 ? { models } : { model: models[0] }),
             instructions,
-            tools: last ? undefined : this.#definitions,
+            tools: last ? undefined : tools,
             input,
             stream: false,
           },
@@ -123,7 +158,7 @@ export class ToolAgent {
       if (last) break;
 
       const outputs = await Promise.all(
-        calls.map((call) => this.#execute(call, signal)),
+        calls.map((call) => this.#execute(call, toolLevel, signal)),
       );
       for (const [index, call] of calls.entries()) {
         input.push({
@@ -139,14 +174,17 @@ export class ToolAgent {
   /** Run one tool call; invalid arguments and failures are reported to the model instead of thrown. */
   async #execute(
     call: OutputFunctionCallItem,
+    toolLevel = ToolLevel.BASIC,
     signal?: AbortSignal,
   ): Promise<string> {
+    const tools = this.#tools.get(toolLevel)!;
+
     try {
-      const tool = this.#tools.get(call.name);
+      const tool = tools.get(call.name);
       if (!tool) throw new Error(`Unknown tool "${call.name}"`);
       const args = tool.schema.safeParse(JSON.parse(call.arguments || '{}'));
       if (!args.success) throw new Error(z.prettifyError(args.error));
-      const result = await tool.execute(args.data, signal);
+      const result = await tool.execute(args.data, toolLevel, signal);
       return typeof result === 'string'
         ? result
         : JSON.stringify(result ?? null);

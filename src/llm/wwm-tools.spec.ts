@@ -452,10 +452,6 @@ describe('createWwmTools', () => {
       },
       gear: {
         sets: { Mistwillow: 1 },
-        stat_totals: {
-          'Max Physical Attack': '175',
-          'Critical Rate': '14.7%',
-        },
         items: [
           {
             slot: 'Primary Weapon',

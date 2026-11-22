@@ -1,15 +1,26 @@
+import { GUILD_NAME, PROXY_NAME } from '#consts.ts';
+
 const ADITIONAL_CONTEXT = await import('#/../llm-context.md', {
   with: { type: 'text' },
 })
   .then((m) => m.default)
   .catch(() => null);
 
-export const getInstructions = (guildName?: string, context?: string) =>
+export const FINAL_TURN_NOTICE =
+  'Tools are no longer available. Do not request or write any tool call. ' +
+  'Answer now in plain text using only the results above; if they are insufficient, say what is missing.';
+
+const GUILD = GUILD_NAME ? `the guild "${GUILD_NAME}"` : 'players';
+const PROXY = PROXY_NAME
+  ? ` Your in-game character is called "${PROXY_NAME}".`
+  : '';
+
+export const getInstructions = (context?: string) =>
   `
-You are Chirpy, a cheerful little robot bird who helps ${guildName ? 'the guild "' + guildName + '"' : 'players'} on Discord with questions about the game Where Winds Meet. Your in-game character is called "Chirpy Proxy".
+You are Chirpy, a cheerful little robot bird who helps ${GUILD} on Discord with questions about the game Where Winds Meet.${PROXY}
 
 ## Personality
-Warm, playful and eager to help, like a loyal pet bird helping the Young Master (user).
+Warm, playful and eager to help, like a loyal pet bird helping the Wanderers (users).
 A small "Chirp!" now and then is welcome, but not in every reply.
 When you cannot help, say so kindly.
 

@@ -8,6 +8,7 @@ import {
   type SlashCommandContext,
 } from 'necord';
 
+import { DisableLLMDto } from './dto/disable-llm.dto';
 import { EnableLLMDto } from './dto/enable-llm.dto';
 import { LLMService } from './llm.service';
 
@@ -36,7 +37,7 @@ export class LLMCommands {
   })
   async enable(
     @Context() [interaction]: SlashCommandContext,
-    @Options() { role }: EnableLLMDto,
+    @Options() { level, role }: EnableLLMDto,
   ) {
     if (!interaction.inGuild()) {
       return interaction.reply({
@@ -45,13 +46,14 @@ export class LLMCommands {
       });
     }
 
-    const inserted = this.service.enable(interaction.guildId, role?.id);
+    const inserted = this.service.enable(interaction.guildId, level, role?.id);
     return interaction.reply({
       flags: ['Ephemeral'],
       content:
         (inserted ? '' : 'Settings changed to ') +
-        'LLM enabled for ' +
-        (role || 'everyone'),
+        level +
+        ' LLM enabled for ' +
+        (role?.name || 'everyone'),
     });
   }
 
@@ -59,7 +61,10 @@ export class LLMCommands {
     name: 'disable',
     description: 'Disable LLM usage for the server.',
   })
-  async disable(@Context() [interaction]: SlashCommandContext) {
+  async disable(
+    @Context() [interaction]: SlashCommandContext,
+    @Options() { level }: DisableLLMDto,
+  ) {
     if (!interaction.inGuild()) {
       return interaction.reply({
         content: `This is a guild-only command.`,
@@ -67,10 +72,14 @@ export class LLMCommands {
       });
     }
 
-    this.service.disable(interaction.guildId);
+    const changed = this.service.disable(interaction.guildId, level);
     return interaction.reply({
       flags: ['Ephemeral'],
-      content: 'LLM usage disabled',
+      content:
+        (level ? level + ' ' : '') +
+        'LLM usage ' +
+        (changed ? 'now' : 'was already') +
+        ' disabled.',
     });
   }
 }

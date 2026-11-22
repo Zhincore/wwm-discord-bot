@@ -16,7 +16,7 @@ import { WwmApiError } from '#wwm/proxy/wwm-proxy.ts';
 import type { WwmService } from '#wwm/wwm.service.ts';
 
 import { formatClock, formatTime } from './time-format';
-import { defineTool, type Tool } from './tool-agent';
+import { defineTool, ToolLevel, type Tool } from './tool-agent';
 
 const MAX_MEMBERS = 20;
 const MAX_LOG_ENTRIES = 20;
@@ -216,6 +216,9 @@ async function call<T>(
   return response;
 }
 
+const omitAdvanced = <T = true>(level: ToolLevel, value: T = true as T) =>
+  level == ToolLevel.ADVANCED ? undefined : value;
+
 /** The tools Chirpy answers game questions with; results are small, flat and already readable. */
 export function createWwmTools(wwm: WwmService): Tool[] {
   /** Numeric ID of the named guild, `undefined` for our own, or candidates when the name is ambiguous. */
@@ -294,6 +297,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
 
   return [
     defineTool({
+      toolLevel: ToolLevel.BASIC,
       name: 'guild_info',
       description:
         'Get a summary of one guild: level, experience and how much the next level needs, funds, fame, activity, founding date, number of members, how many are online, and the guild notice. Use for general questions about a guild. Leave guild out for our own guild.',
@@ -318,9 +322,9 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
+      toolLevel: ToolLevel.BASIC,
       name: 'guild_members',
-      description:
-        'List the members of a guild with level, ranks, whether they are online or when they were last seen, and their weekly and total contribution. Use for questions like who is online, who holds a rank, who is inactive, or who contributed most. Leave guild out for our own guild.',
+      description: `List the members of a guild with level, ranks, whether they are online or when they were last seen, and their weekly and total contribution. Use for questions like who is online, who holds a rank, who is inactive, or who contributed most. Leave guild out for our own guild.`,
       schema: z.object({
         guild: guildParam,
         role: z
@@ -345,8 +349,9 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             'Order of the list: recent (default) puts online and recently seen members first, inactive puts the longest offline first, the contribution options put the highest first.',
           ),
       }),
-      execute: ({ guild, role, online_only, sort = 'recent' }) =>
-        guildPart('members', guild, ({ members }) => {
+      prepareSchema: (s, l) => s.omit({ guild: omitAdvanced(l) }),
+      execute: ({ guild, role, online_only, sort = 'recent' }, level) =>
+        guildPart('members', omitAdvanced(level, guild), ({ members }) => {
           const all = Object.values(members);
           const wanted = role?.trim().toLowerCase();
           const holds = (exact: boolean) => (m: GuildMember) =>
@@ -386,12 +391,13 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
+      toolLevel: ToolLevel.BASIC,
       name: 'guild_events',
-      description:
-        "Get a guild's scheduled events (Breaking Army, Showdown, Guild Party) with their start times and bosses. Use for questions about when an event happens or what is next. Leave guild out for our own guild.",
+      description: `Get a guild's scheduled events (Breaking Army, Showdown, Guild Party) with their start times and bosses. Use for questions about when an event happens or what is next. Leave guild out for our own guild.`,
       schema: z.object({ guild: guildParam }),
-      execute: ({ guild }) =>
-        guildPart('events', guild, ({ events }) => {
+      prepareSchema: (s, l) => s.omit({ guild: omitAdvanced(l) }),
+      execute: ({ guild }, level) =>
+        guildPart('events', omitAdvanced(level, guild), ({ events }) => {
           const now = Date.now() / 1000;
           const plays = Object.values(events);
           const upcoming = plays
@@ -431,6 +437,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
+      toolLevel: ToolLevel.ADVANCED,
       name: 'guild_log',
       description:
         "Get recent entries from a guild's log: members joining, leaving or being removed, rank changes, guild and building upgrades, and event schedule changes. Use for questions about what happened recently in a guild. Leave guild out for our own guild.",
@@ -469,6 +476,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
+      toolLevel: ToolLevel.BASIC,
       name: 'guild_war',
       description:
         "Get our own guild's Guild War data. Use schedule for when the next Guild War matches start. Use standing for league rank, score, win and loss record and the current opponent. Use matches for recent match results, including each of our players' kills, deaths, assists and who was MVP. Opponent guilds come with their numeric guild ID, which the other guild tools accept. Only available for our own guild.",
@@ -554,9 +562,86 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
+      toolLevel: ToolLevel.BASIC,
       name: 'find_player',
       description:
-        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, scene for the other players standing in the scene on their player card, cohort for their cohort members.',
+        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed.',
+      schema: z.object({
+        player: z
+          .string()
+          .describe(
+            'Player name as the user wrote it, or numeric UID. Prefer the UID when you know it.',
+          ),
+      }),
+      execute: async ({ player }) => {
+        const who = player.trim();
+        const notFound = `No player named "${who}" found.`;
+
+        const fetch = (id: string) => call(wwm.fetchPlayer(id), notFound);
+
+        let found: Awaited<ReturnType<typeof fetch>>;
+        try {
+          found = await fetch(who);
+        } catch (error) {
+          if (!(error instanceof Error) || error.message !== notFound) {
+            throw error;
+          }
+          // The game finds only the exact nickname, so fall back to our guild's member list.
+          const matches = await guildMembersLike(who);
+          if (matches.length === 0) throw error;
+          if (matches.length > 1) {
+            return {
+              note: 'No player has exactly this name, but these members of our guild are close. Ask the user which one they mean.',
+              players: matches
+                .slice(0, MAX_GUILDS)
+                .map((m) => ({ name: m.name, uid: m.uid, level: m.level })),
+            };
+          }
+          found = await fetch(matches[0]!.uid);
+        }
+        const profile = found;
+
+        return {
+          name: profile.name,
+          uid: profile.uid,
+          level: profile.level,
+          sect: named(profile.sect),
+          status: presence(profile),
+          play_time_hours: profile.online_time
+            ? Math.round(profile.online_time / 3600)
+            : undefined,
+          character_created: profile.created_ts
+            ? formatTime(profile.created_ts)
+            : undefined,
+          world_level: profile.world_level,
+          mastery: profile.mastery ? Math.round(profile.mastery) : undefined,
+          achievements: profile.achievements
+            ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
+            : undefined,
+          guild: profile.guild && {
+            name: profile.guild.name ?? 'not in a guild',
+            id: profile.guild.id,
+            weekly_contribution: profile.guild.week_fund,
+            total_contribution: profile.guild.fund,
+            guild_war_season: profile.guildwar?.season,
+            guild_war_league_joins: profile.guildwar?.league_joins,
+            guild_war_matchmaking_joins: profile.guildwar?.matchmaking_joins,
+          },
+          pvp: profile.pvp && {
+            grade: profile.pvp.grade,
+            sub_grade: profile.pvp.small_grade,
+            matches: profile.pvp.matches,
+            best_streak: profile.pvp.best_streak,
+          },
+          as_of: formatTime(profile.fetched),
+        };
+      },
+    }),
+    defineTool({
+      toolLevel: ToolLevel.ADVANCED,
+      name: 'find_player_advanced',
+      description:
+        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, scene for the other players standing in the scene on their player card, cohort for their sworn cohort members.',
       schema: z.object({
         player: z
           .string()
@@ -703,6 +788,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
+      toolLevel: ToolLevel.BASIC,
       name: 'find_guild',
       description:
         'Search for guilds by a word from their name. Use this when the user names a guild you have not looked up yet, or is unsure of the exact name. The search matches whole words, so search for one distinctive word rather than the full name.',
@@ -725,5 +811,5 @@ export function createWwmTools(wwm: WwmService): Tool[] {
         };
       },
     }),
-  ];
+  ].filter((v) => v);
 }

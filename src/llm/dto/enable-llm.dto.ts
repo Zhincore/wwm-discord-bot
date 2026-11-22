@@ -1,11 +1,24 @@
 import type { Role } from 'discord.js';
-import { RoleOption } from 'necord';
+import { RoleOption, StringOption } from 'necord';
+
+import { ToolLevel } from '#llm/tool-agent.ts';
 
 export class EnableLLMDto {
+  @StringOption({
+    name: 'level',
+    description: 'The level of features to provide.',
+    choices: [
+      { name: 'basic', value: ToolLevel.BASIC },
+      { name: 'advanced', value: ToolLevel.ADVANCED },
+    ],
+    required: true,
+  })
+  public level: ToolLevel;
+
   @RoleOption({
     name: 'role',
-    description: 'Optionally role to limit LLM usage to. Any role if empty.',
-    required: false,
+    description: 'The role that can use LLM. Use @everyone for no limit.',
+    required: true,
   })
-  public role?: Role;
+  public role: Role;
 }

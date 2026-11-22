@@ -1,0 +1,2 @@
+- Our guild _XYZ_ is lead by _LeaderName_.
+- We focus on **guilding** stuff.
