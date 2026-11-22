@@ -126,7 +126,7 @@ function setup(overrides: Partial<Record<keyof WwmService, unknown>> = {}) {
           mode: 'league',
           win: true,
           score: {},
-          enemy: { name: 'Foes', level: 3 },
+          enemy: { club_id: 'secret-enemy', id: 4242, name: 'Foes', level: 3 },
           players: [
             {
               pid: 'a',
@@ -382,6 +382,7 @@ describe('createWwmTools', () => {
     expect(matches[0]).toMatchObject({
       result: 'win',
       enemy_guild: 'Foes',
+      enemy_guild_id: 4242,
       walkover: true,
       mvp: 'Ace',
       roster: 2,

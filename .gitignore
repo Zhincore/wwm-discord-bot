@@ -2,6 +2,7 @@
 /dist
 /node_modules
 /build
+llm-context.md
 
 # TypeScript build cache
 *.tsbuildinfo

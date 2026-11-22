@@ -506,7 +506,9 @@ export interface GuildWarLeague {
 export interface GuildWarOpponent {
   club_id: string;
   hostnum?: number;
-  /** filled once the opponent guild's info has been fetched (within seconds) */
+  /** public numeric guild ID, as used by `GET /guilds/{id}`; filled with `name` and `level` once the
+   *  opponent guild's info has been fetched (within seconds) */
+  id?: number;
   name?: string;
   level?: number;
   fame?: number;
@@ -546,6 +548,8 @@ export interface GuildWarMatch {
   enemy: {
     club_id?: string;
     hostnum?: number;
+    /** public numeric guild ID, as used by `GET /guilds/{id}` */
+    id?: number;
     name?: string;
     level?: number;
     score_old?: number;

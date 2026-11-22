@@ -125,30 +125,6 @@ function gearSets(gear: Gear[]) {
   return sets;
 }
 
-/** Every stat summed over all worn items (base attributes and rolled stats), in the game's format. */
-function gearTotals(gear: Gear[]) {
-  const totals = new Map<string, { sum: number; percent: boolean }>();
-  for (const item of gear) {
-    for (const s of [...(item.base ?? []), ...(item.affixes ?? [])]) {
-      if (!s.name || typeof s.value !== 'number') continue;
-      const total = totals.get(s.name) ?? {
-        sum: 0,
-        percent: s.text?.endsWith('%') ?? false,
-      };
-      total.sum += s.value;
-      totals.set(s.name, total);
-    }
-  }
-  return Object.fromEntries(
-    [...totals].map(([name, { sum, percent }]) => [
-      name,
-      percent
-        ? `${(sum * 100).toFixed(1)}%`
-        : String(Math.round(sum * 10) / 10),
-    ]),
-  );
-}
-
 /**
  * Replace the server-clock times in a guild log line with Discord tags:
  * "Sat 01:30 (UTC+8)" becomes the first such moment after the entry, "02:00 (UTC+8)" a time of day.
@@ -192,6 +168,7 @@ function shapeMatch(match: GuildWarMatch) {
     mode: String(match.mode),
     result: match.win ? 'win' : 'loss',
     enemy_guild: match.enemy.name,
+    enemy_guild_id: match.enemy.id,
     enemy_level: match.enemy.level,
     walkover: match.enemy_players.length === 0 || undefined,
     mvp: [...match.players, ...match.enemy_players].find((p) => p.mvp)?.name,
@@ -494,7 +471,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'guild_war',
       description:
-        "Get our own guild's Guild War data. Use schedule for when the next Guild War matches start. Use standing for league rank, score, win and loss record and the current opponent. Use matches for recent match results, including each of our players' kills, deaths, assists and who was MVP. Only available for our own guild.",
+        "Get our own guild's Guild War data. Use schedule for when the next Guild War matches start. Use standing for league rank, score, win and loss record and the current opponent. Use matches for recent match results, including each of our players' kills, deaths, assists and who was MVP. Opponent guilds come with their numeric guild ID, which the other guild tools accept. Only available for our own guild.",
       schema: z.object({
         what: z
           .enum(['schedule', 'standing', 'matches'])
@@ -555,6 +532,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             wins: league.win_count,
             opponent: opponent
               ? {
+                  id: opponent.id,
                   name: opponent.name,
                   level: opponent.level,
                   rank: opponent.rank,
@@ -690,8 +668,6 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             wants('gear') && profile.loadout
               ? {
                   sets: gearSets(gear),
-                  stat_totals: gearTotals(gear),
-                  note: 'Totals cover worn gear only, not the full character sheet.',
                   items: gear.map(shapeGear),
                 }
               : undefined,
