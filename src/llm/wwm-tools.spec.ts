@@ -173,6 +173,19 @@ function setup(overrides: Partial<Record<keyof WwmService, unknown>> = {}) {
         sets: [{ id: 2, name: 'Heavenly Frost' }, { id: 9 }],
         items: [{ id: 603001, name: 'Hairstyle 1' }],
       },
+      scene: {
+        players: [
+          {
+            pid: 'secret-friend',
+            hostnum: 1,
+            uid: '777',
+            name: 'Friend',
+            level: 100,
+            online: true,
+            pose: { id: 2901042, name: 'Wish' },
+          },
+        ],
+      },
       linked: { steam: 'steam-id', discord_id: 'discord-id' },
       card: {},
       build_hidden: false,
@@ -392,11 +405,12 @@ describe('createWwmTools', () => {
     const { run, wwm } = setup();
     const result = await run('find_player', {
       player: ' Brasshop ',
-      include: ['build', 'gear', 'appearance', 'cohort'],
+      include: ['build', 'gear', 'appearance', 'scene', 'cohort'],
     });
     expect(wwm.fetchPlayer).toHaveBeenCalledWith('Brasshop', [
       'build',
       'appearance',
+      'scene',
     ]);
     expect(wwm.fetchPlayerCohort).toHaveBeenCalledWith('Brasshop');
     expect(result).toMatchObject({
@@ -412,6 +426,17 @@ describe('createWwmTools', () => {
         pieces_owned: 3,
         pieces_by_category: { Outfit: 2, Hat: 1 },
         complete_sets: ['Heavenly Frost', '#9'],
+      },
+      scene: {
+        players: [
+          {
+            name: 'Friend',
+            uid: '777',
+            level: 100,
+            status: 'online',
+            pose: 'Wish',
+          },
+        ],
       },
       cohort: 'not in a cohort',
       guild: {

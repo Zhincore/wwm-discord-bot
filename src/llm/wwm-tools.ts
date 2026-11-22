@@ -578,7 +578,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       name: 'find_player',
       description:
-        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, cohort for their cohort members.',
+        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, scene for the other players standing in the scene on their player card, cohort for their cohort members.',
       schema: z.object({
         player: z
           .string()
@@ -587,7 +587,15 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           ),
         include: z
           .array(
-            z.enum(['guild', 'pvp', 'build', 'gear', 'appearance', 'cohort']),
+            z.enum([
+              'guild',
+              'pvp',
+              'build',
+              'gear',
+              'appearance',
+              'scene',
+              'cohort',
+            ]),
           )
           .optional()
           .describe('Extra groups to return; omit for the basic profile.'),
@@ -694,6 +702,12 @@ export function createWwmTools(wwm: WwmService): Tool[] {
             complete_sets: profile.appearance.sets.map(
               (set) => set.name ?? `#${set.id}`,
             ),
+          },
+          scene: profile.scene && {
+            players: profile.scene.players.map((p) => ({
+              ...shapeRelated(p),
+              pose: p.pose?.name,
+            })),
           },
           cohort:
             cohort &&

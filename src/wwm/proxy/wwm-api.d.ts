@@ -612,6 +612,8 @@ export type PlayerInclude =
   | 'pvp'
   /** `appearance`: owned outfit pieces, complete sets, fashion score */
   | 'appearance'
+  /** `scene`: other players standing in the scene of the player card */
+  | 'scene'
   /** `loadout` (names resolved) + raw `build` / `equips`: skills and worn equipment; costs one more game request */
   | 'build';
 
@@ -839,6 +841,11 @@ export interface PlayerProfile {
     small_grade?: number;
     matches?: number;
     best_streak?: number;
+  };
+  /** include=scene: the players the owner placed in the scene of their player card, each with the
+   *  pose they were given; absent when the scene was not returned */
+  scene?: {
+    players: (RelatedPlayer & { pose?: { id: number; name?: string } })[];
   };
   /** include=appearance: what the player owns in the wardrobe */
   appearance?: {
