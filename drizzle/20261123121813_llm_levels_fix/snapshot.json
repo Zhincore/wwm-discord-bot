@@ -1,0 +1,308 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "5b45c638-59c5-4e34-bbcb-10def9f58b97",
+  "prevIds": [
+    "8e879078-1f54-4978-861f-ccaaa7035670"
+  ],
+  "ddl": [
+    {
+      "name": "codes",
+      "entityType": "tables"
+    },
+    {
+      "name": "app_state",
+      "entityType": "tables"
+    },
+    {
+      "name": "game_data",
+      "entityType": "tables"
+    },
+    {
+      "name": "game_data_emojis",
+      "entityType": "tables"
+    },
+    {
+      "name": "game_profiles",
+      "entityType": "tables"
+    },
+    {
+      "name": "guild_llm_whitelist",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guildId",
+      "entityType": "columns",
+      "table": "codes"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "channel",
+      "entityType": "columns",
+      "table": "codes"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pingRole",
+      "entityType": "columns",
+      "table": "codes"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "key",
+      "entityType": "columns",
+      "table": "app_state"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "value",
+      "entityType": "columns",
+      "table": "app_state"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "game_data"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "game_data"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "game_data"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "game_data"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "game_data_emojis"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "url",
+      "entityType": "columns",
+      "table": "game_data_emojis"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "game_profiles"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "memberId",
+      "entityType": "columns",
+      "table": "game_profiles"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "session",
+      "entityType": "columns",
+      "table": "game_profiles"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "linkMessage",
+      "entityType": "columns",
+      "table": "game_profiles"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": "(CURRENT_TIMESTAMP)",
+      "generated": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "table": "game_profiles"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "expiresAt",
+      "entityType": "columns",
+      "table": "game_profiles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guildId",
+      "entityType": "columns",
+      "table": "guild_llm_whitelist"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "roleId",
+      "entityType": "columns",
+      "table": "guild_llm_whitelist"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'BASIC'",
+      "generated": null,
+      "name": "level",
+      "entityType": "columns",
+      "table": "guild_llm_whitelist"
+    },
+    {
+      "columns": [
+        "kind",
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "game_data_pk",
+      "entityType": "pks",
+      "table": "game_data"
+    },
+    {
+      "columns": [
+        "guildId"
+      ],
+      "nameExplicit": false,
+      "name": "codes_pk",
+      "table": "codes",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "key"
+      ],
+      "nameExplicit": false,
+      "name": "app_state_pk",
+      "table": "app_state",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "name"
+      ],
+      "nameExplicit": false,
+      "name": "game_data_emojis_pk",
+      "table": "game_data_emojis",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "game_profiles_pk",
+      "table": "game_profiles",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "guildId",
+          "isExpression": false
+        },
+        {
+          "value": "level",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "guild_level_index",
+      "entityType": "indexes",
+      "table": "guild_llm_whitelist"
+    },
+    {
+      "columns": [
+        "memberId"
+      ],
+      "nameExplicit": false,
+      "name": "game_profiles_memberId_unique",
+      "entityType": "uniques",
+      "table": "game_profiles"
+    }
+  ],
+  "renames": []
+}
