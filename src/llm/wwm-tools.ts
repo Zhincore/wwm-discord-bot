@@ -15,8 +15,8 @@ import type {
 import { WwmApiError } from '#wwm/proxy/wwm-proxy.ts';
 import type { WwmService } from '#wwm/wwm.service.ts';
 
-import { formatClock, formatTime } from './time-format';
-import { defineTool, ToolLevel, type Tool } from './tool-agent';
+import { formatClock, formatTime } from './utils/time-format';
+import { defineTool, ToolLevel, type Tool } from './utils/tool-agent';
 
 const MAX_MEMBERS = 20;
 const MAX_LOG_ENTRIES = 20;
@@ -217,7 +217,7 @@ async function call<T>(
 }
 
 const omitAdvanced = (level: ToolLevel) =>
-  level == ToolLevel.ADVANCED ? undefined : true;
+  level == 'ADVANCED' ? undefined : true;
 
 /** The tools Chirpy answers game questions with; results are small, flat and already readable. */
 export function createWwmTools(wwm: WwmService): Tool[] {
@@ -303,7 +303,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
 
   return [
     defineTool({
-      toolLevel: ToolLevel.BASIC,
+      toolLevel: 'BASIC',
       name: 'guild_info',
       description:
         'Get a summary of one guild: level, experience and how much the next level needs, funds, fame, activity, founding date, number of members, how many are online, and the guild notice. Use for general questions about a guild. Default is our own guild.',
@@ -328,7 +328,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
-      toolLevel: ToolLevel.BASIC,
+      toolLevel: 'BASIC',
       name: 'guild_members',
       description: `List the members of a guild with level, ranks, whether they are online or when they were last seen, and their weekly and total contribution. Use for questions like who is online, who holds a rank, who is inactive, or who contributed most. Default is our own guild.`,
       schema: z.object({
@@ -359,7 +359,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
       execute: ({ guild, role, online_only, sort = 'recent' }, level) =>
         guildPart(
           'members',
-          level == ToolLevel.ADVANCED ? guild : undefined,
+          level == 'ADVANCED' ? guild : undefined,
           ({ members }, ourGuild) => {
             const all = Object.values(members);
             const wanted = role?.trim().toLowerCase();
@@ -402,7 +402,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
-      toolLevel: ToolLevel.BASIC,
+      toolLevel: 'BASIC',
       name: 'guild_events',
       description: `Get a guild's scheduled events (Breaking Army, Showdown, Guild Party) with their start times and bosses. Use for questions about when an event happens or what is next. Default is our own guild.`,
       schema: z.object({ guild: guildParam }),
@@ -410,7 +410,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
       execute: ({ guild }, level) =>
         guildPart(
           'events',
-          level == ToolLevel.ADVANCED ? guild : undefined,
+          level == 'ADVANCED' ? guild : undefined,
           ({ events, updated }, ourGuild) => {
             const now = Date.now() / 1000;
             const plays = Object.values(events);
@@ -456,7 +456,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
-      toolLevel: ToolLevel.ADVANCED,
+      toolLevel: 'ADVANCED',
       name: 'guild_log',
       description:
         "Get recent entries from a guild's log: members joining, leaving or being removed, rank changes, guild and building upgrades, and event schedule changes. Use for questions about what happened recently in a guild. Default is our own guild.",
@@ -495,7 +495,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
-      toolLevel: ToolLevel.BASIC,
+      toolLevel: 'BASIC',
       name: 'guild_war',
       description:
         "Get our own guild's Guild War data. Use schedule for when the next Guild War matches start. Use standing for league rank, score, win and loss record and the current opponent. Use matches for recent match results, including each of our players' kills, deaths, assists and who was MVP. Opponent guilds come with their numeric guild ID, which the other guild tools accept. Only available for our own guild.",
@@ -581,7 +581,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
-      toolLevel: ToolLevel.BASIC,
+      toolLevel: 'BASIC',
       inheritLevel: false,
       name: 'find_player',
       description:
@@ -658,7 +658,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
       },
     }),
     defineTool({
-      toolLevel: ToolLevel.ADVANCED,
+      toolLevel: 'ADVANCED',
       name: 'find_player_advanced',
       description:
         'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, scene for the other players standing in the scene on their player card, cohort for their sworn cohort members.',
@@ -808,7 +808,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
 
     defineTool({
-      toolLevel: ToolLevel.BASIC,
+      toolLevel: 'BASIC',
       name: 'find_guild',
       description:
         'Search for guilds by a word from their name. Use this when the user names a guild you have not looked up yet, or is unsure of the exact name. The search matches whole words, so search for one distinctive word rather than the full name.',

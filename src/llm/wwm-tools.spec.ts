@@ -1,7 +1,7 @@
 import { WwmApiError } from '#wwm/proxy/wwm-proxy.ts';
 import type { WwmService } from '#wwm/wwm.service.ts';
 
-import type { Tool } from './tool-agent';
+import type { Tool } from './utils/tool-agent';
 import { createWwmTools } from './wwm-tools';
 
 const NOW = 1_795_000_000;

@@ -7,15 +7,10 @@ import type {
 } from '@openrouter/sdk/models';
 import * as z from 'zod';
 
-import { FINAL_TURN_NOTICE } from './instructions';
+import { FINAL_TURN_NOTICE } from '../instructions';
 
-// Order matters!
-export enum ToolLevel {
-  /** Anyone can use this tool */
-  BASIC = 'BASIC',
-  /** Only authorized personel */
-  ADVANCED = 'ADVANCED',
-}
+export const ToolLevel = ['BASIC', 'ADVANCED'] as const;
+export type ToolLevel = (typeof ToolLevel)[number];
 
 type InputItem = Exclude<InputsUnion, string>[number];
 
@@ -99,11 +94,10 @@ export class ToolAgent {
         ),
       }) as const;
 
-    const levels = Object.values(ToolLevel);
-    for (const level of levels) {
+    for (const level of ToolLevel) {
       const filtered = tools.filter((t) => {
         if (t.inheritLevel ?? true) return t.toolLevel === level;
-        return levels.indexOf(t.toolLevel) <= levels.indexOf(level);
+        return ToolLevel.indexOf(t.toolLevel) <= ToolLevel.indexOf(level);
       });
       this.#tools.set(level, new Map(filtered.map(toEntry)));
       this.#definitions.set(
@@ -120,7 +114,7 @@ export class ToolAgent {
       instructions = this.options.instructions,
       history = [],
       signal,
-      toolLevel = ToolLevel.BASIC,
+      toolLevel = 'BASIC',
     }: ToolAgentRunOptions = {},
   ): Promise<string> {
     const { request } = this.options;
@@ -177,7 +171,7 @@ export class ToolAgent {
   /** Run one tool call; invalid arguments and failures are reported to the model instead of thrown. */
   async #execute(
     call: OutputFunctionCallItem,
-    toolLevel = ToolLevel.BASIC,
+    toolLevel: ToolLevel = 'BASIC',
     signal?: AbortSignal,
   ): Promise<string> {
     const tools = this.#tools.get(toolLevel)!;

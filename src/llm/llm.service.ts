@@ -8,10 +8,15 @@ import { DatabaseService } from '#common/database/database.service.ts';
 import { LLM_MODELS } from '#consts.ts';
 import { WwmService } from '#wwm/wwm.service.ts';
 
-import { formatUserTurn, type Asker } from './conversation';
 import { getInstructions } from './instructions';
 import { llmRoles } from './llm-settings.schema';
-import { defineTool, ToolAgent, ToolLevel, type Turn } from './tool-agent';
+import { formatUserTurn, type Asker } from './utils/conversation';
+import {
+  defineTool,
+  ToolAgent,
+  ToolLevel,
+  type Turn,
+} from './utils/tool-agent';
 import { createWwmTools } from './wwm-tools';
 
 const TIMEOUT = 60_000;
@@ -41,7 +46,7 @@ const STATIC_TOOLS = [
     name: 'format_number',
     description:
       'Formats number for better readability (e.g. 10 000), use this when writing long numbers.',
-    toolLevel: ToolLevel.BASIC,
+    toolLevel: 'BASIC',
     schema: z.object({
       number: z.number().nonoptional().describe('The number to format'),
       locale: z

@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { cleanContent, type Message } from 'discord.js';
 import { Context, On, type ContextOf } from 'necord';
 
-import { Conversations } from './conversation';
 import { BusyError, LLMService } from './llm.service';
-import { ToolLevel } from './tool-agent';
+import { Conversations } from './utils/conversation';
+import { ToolLevel } from './utils/tool-agent';
 
 const MESSAGE_LIMIT = 2000;
 const TYPING_INTERVAL = 8_000;
@@ -37,7 +37,7 @@ export class LLMListener {
     const settings = this.service.getSettings(message.guildId);
     if (!settings || !message.member) return;
 
-    const maxLevel = Object.values(ToolLevel).find((level) => {
+    const maxLevel = ToolLevel.findLast((level) => {
       const roleId = settings[level];
       return roleId && message.member!.roles.cache.has(roleId);
     });
