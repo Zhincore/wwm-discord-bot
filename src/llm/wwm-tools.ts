@@ -216,8 +216,8 @@ async function call<T>(
   return response;
 }
 
-const omitAdvanced = <T = true>(level: ToolLevel, value: T = true as T) =>
-  level == ToolLevel.ADVANCED ? undefined : value;
+const omitAdvanced = (level: ToolLevel) =>
+  level == ToolLevel.ADVANCED ? undefined : true;
 
 /** The tools Chirpy answers game questions with; results are small, flat and already readable. */
 export function createWwmTools(wwm: WwmService): Tool[] {
@@ -283,7 +283,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
   async function guildPart<K extends keyof GuildParts>(
     part: K,
     guild: string | undefined,
-    shape: (data: GuildPart<K>) => object,
+    shape: (data: GuildPart<K>, ourGuild: boolean) => object,
   ) {
     const id = await resolveGuild(guild);
     if (typeof id === 'object') return id;
@@ -292,15 +292,21 @@ export function createWwmTools(wwm: WwmService): Tool[] {
       `No guild with ID ${id} found.`,
     );
     if ('club' in data) throw new Error('The bot is not in a guild.');
-    return { ...shape(data), as_of: formatTime(data.updated) };
+    return {
+      ...shape(data, !!guild),
+      as_of: formatTime(data.updated),
+    };
   }
+
+  const ourGuildNote = (ourGuild: boolean, wantedGuild?: string) =>
+    ourGuild && wantedGuild ? 'Showing data for our own guild.' : undefined;
 
   return [
     defineTool({
       toolLevel: ToolLevel.BASIC,
       name: 'guild_info',
       description:
-        'Get a summary of one guild: level, experience and how much the next level needs, funds, fame, activity, founding date, number of members, how many are online, and the guild notice. Use for general questions about a guild. Leave guild out for our own guild.',
+        'Get a summary of one guild: level, experience and how much the next level needs, funds, fame, activity, founding date, number of members, how many are online, and the guild notice. Use for general questions about a guild. Default is our own guild.',
       schema: z.object({ guild: guildParam }),
       execute: ({ guild }) =>
         guildPart('base', guild, ({ base }) => ({
@@ -324,7 +330,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     defineTool({
       toolLevel: ToolLevel.BASIC,
       name: 'guild_members',
-      description: `List the members of a guild with level, ranks, whether they are online or when they were last seen, and their weekly and total contribution. Use for questions like who is online, who holds a rank, who is inactive, or who contributed most. Leave guild out for our own guild.`,
+      description: `List the members of a guild with level, ranks, whether they are online or when they were last seen, and their weekly and total contribution. Use for questions like who is online, who holds a rank, who is inactive, or who contributed most. Default is our own guild.`,
       schema: z.object({
         guild: guildParam,
         role: z
@@ -351,96 +357,109 @@ export function createWwmTools(wwm: WwmService): Tool[] {
       }),
       prepareSchema: (s, l) => s.omit({ guild: omitAdvanced(l) }),
       execute: ({ guild, role, online_only, sort = 'recent' }, level) =>
-        guildPart('members', omitAdvanced(level, guild), ({ members }) => {
-          const all = Object.values(members);
-          const wanted = role?.trim().toLowerCase();
-          const holds = (exact: boolean) => (m: GuildMember) =>
-            m.roles.some((r) =>
-              exact
-                ? r.toLowerCase() === wanted
-                : r.toLowerCase().includes(wanted!),
-            );
-          let matching = all;
-          if (wanted) {
-            matching = all.filter(holds(true));
-            if (matching.length === 0) matching = all.filter(holds(false));
-          }
-          if (online_only) matching = matching.filter((m) => m.online);
-          const shown = matching
-            .toSorted(MEMBER_SORTS[sort])
-            .slice(0, MAX_MEMBERS);
+        guildPart(
+          'members',
+          level == ToolLevel.ADVANCED ? guild : undefined,
+          ({ members }, ourGuild) => {
+            const all = Object.values(members);
+            const wanted = role?.trim().toLowerCase();
+            const holds = (exact: boolean) => (m: GuildMember) =>
+              m.roles.some((r) =>
+                exact
+                  ? r.toLowerCase() === wanted
+                  : r.toLowerCase().includes(wanted!),
+              );
+            let matching = all;
+            if (wanted) {
+              matching = all.filter(holds(true));
+              if (matching.length === 0) matching = all.filter(holds(false));
+            }
+            if (online_only) matching = matching.filter((m) => m.online);
+            const shown = matching
+              .toSorted(MEMBER_SORTS[sort])
+              .slice(0, MAX_MEMBERS);
 
-          return {
-            total: matching.length,
-            shown: shown.length,
-            ranks_in_guild:
-              wanted && matching.length === 0
-                ? [...new Set(all.flatMap((m) => m.roles))].sort()
-                : undefined,
-            members: shown.map((m) => ({
-              name: m.name,
-              uid: m.uid,
-              level: m.level,
-              ranks: m.roles,
-              status: presence(m),
-              weekly_contribution: m.week_fund,
-              total_contribution: m.fund,
-            })),
-          };
-        }),
+            return {
+              note: ourGuildNote(ourGuild, guild),
+              total: matching.length,
+              shown: shown.length,
+              ranks_in_guild:
+                wanted && matching.length === 0
+                  ? [...new Set(all.flatMap((m) => m.roles))].sort()
+                  : undefined,
+              members: shown.map((m) => ({
+                name: m.name,
+                uid: m.uid,
+                level: m.level,
+                ranks: m.roles,
+                status: presence(m),
+                weekly_contribution: m.week_fund,
+                total_contribution: m.fund,
+              })),
+            };
+          },
+        ),
     }),
 
     defineTool({
       toolLevel: ToolLevel.BASIC,
       name: 'guild_events',
-      description: `Get a guild's scheduled events (Breaking Army, Showdown, Guild Party) with their start times and bosses. Use for questions about when an event happens or what is next. Leave guild out for our own guild.`,
+      description: `Get a guild's scheduled events (Breaking Army, Showdown, Guild Party) with their start times and bosses. Use for questions about when an event happens or what is next. Default is our own guild.`,
       schema: z.object({ guild: guildParam }),
       prepareSchema: (s, l) => s.omit({ guild: omitAdvanced(l) }),
       execute: ({ guild }, level) =>
-        guildPart('events', omitAdvanced(level, guild), ({ events }) => {
-          const now = Date.now() / 1000;
-          const plays = Object.values(events);
-          const upcoming = plays
-            .flatMap((play) =>
-              [...play.schedule, ...play.next_week_schedule].map((slot) => ({
-                play,
-                slot,
-              })),
-            )
-            .filter(({ slot }) => (slot.end_ts ?? slot.start_ts ?? 0) > now)
-            .sort((a, b) => (a.slot.start_ts ?? 0) - (b.slot.start_ts ?? 0));
+        guildPart(
+          'events',
+          level == ToolLevel.ADVANCED ? guild : undefined,
+          ({ events, updated }, ourGuild) => {
+            const now = Date.now() / 1000;
+            const plays = Object.values(events);
+            const upcoming = plays
+              .flatMap((play) =>
+                [...play.schedule, ...play.next_week_schedule].map((slot) => ({
+                  play,
+                  slot,
+                })),
+              )
+              .filter(({ slot }) => (slot.end_ts ?? slot.start_ts ?? 0) > now)
+              .sort((a, b) => (a.slot.start_ts ?? 0) - (b.slot.start_ts ?? 0));
 
-          return {
-            total: upcoming.length,
-            shown: Math.min(upcoming.length, MAX_EVENTS),
-            events: upcoming.slice(0, MAX_EVENTS).map(({ play, slot }) => ({
-              name: play.name,
-              start: slot.start_ts && formatTime(slot.start_ts),
-              end: slot.end_ts && formatTime(slot.end_ts),
-              boss: slot.boss === undefined ? undefined : String(slot.boss),
-            })),
-            unscheduled: plays
-              .filter((p) => !p.schedule.length && !p.next_week_schedule.length)
-              .map((play) => ({
+            return {
+              note: ourGuildNote(ourGuild, guild),
+              total: upcoming.length,
+              shown: Math.min(upcoming.length, MAX_EVENTS),
+              events: upcoming.slice(0, MAX_EVENTS).map(({ play, slot }) => ({
                 name: play.name,
-                start:
-                  play.start_ts && play.start_ts > now
-                    ? formatTime(play.start_ts)
-                    : undefined,
-                auto_starts_at:
-                  play.auto_start && play.open_time.length
-                    ? serverClock(play.open_time)
-                    : undefined,
+                start: slot.start_ts && formatTime(slot.start_ts),
+                end: slot.end_ts && formatTime(slot.end_ts),
+                boss: slot.boss === undefined ? undefined : String(slot.boss),
               })),
-          };
-        }),
+              unscheduled: plays
+                .filter(
+                  (p) => !p.schedule.length && !p.next_week_schedule.length,
+                )
+                .map((play) => ({
+                  name: play.name,
+                  start:
+                    play.start_ts && play.start_ts > now
+                      ? formatTime(play.start_ts)
+                      : undefined,
+                  auto_starts_at:
+                    play.auto_start && play.open_time.length
+                      ? serverClock(play.open_time)
+                      : undefined,
+                })),
+              as_of: formatTime(updated),
+            };
+          },
+        ),
     }),
 
     defineTool({
       toolLevel: ToolLevel.ADVANCED,
       name: 'guild_log',
       description:
-        "Get recent entries from a guild's log: members joining, leaving or being removed, rank changes, guild and building upgrades, and event schedule changes. Use for questions about what happened recently in a guild. Leave guild out for our own guild.",
+        "Get recent entries from a guild's log: members joining, leaving or being removed, rank changes, guild and building upgrades, and event schedule changes. Use for questions about what happened recently in a guild. Default is our own guild.",
       schema: z.object({
         guild: guildParam,
         kind: z
@@ -563,6 +582,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
 
     defineTool({
       toolLevel: ToolLevel.BASIC,
+      inheritLevel: false,
       name: 'find_player',
       description:
         'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed.',

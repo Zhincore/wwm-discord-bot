@@ -37,16 +37,10 @@ export class LLMListener {
     const settings = this.service.getSettings(message.guildId);
     if (!settings || !message.member) return;
 
-    let maxLevel: ToolLevel | undefined;
-    for (const level of Object.values(ToolLevel)) {
+    const maxLevel = Object.values(ToolLevel).find((level) => {
       const roleId = settings[level];
-      if (!roleId) continue;
-
-      const role = await message.guild.roles.fetch(roleId);
-      if (!role?.members.has(message.member.id)) continue;
-
-      maxLevel = level;
-    }
+      return roleId && message.member!.roles.cache.has(roleId);
+    });
     if (!maxLevel) return;
 
     this.#conversations ??= new Conversations<Message>(botId, (m) =>
@@ -65,6 +59,7 @@ export class LLMListener {
       await message.channel.sendTyping().catch(() => null);
       const result = await this.service.ask({
         text,
+        toolLevel: maxLevel,
         asker: {
           id: message.author.id,
           name: message.member?.displayName ?? message.author.displayName,
@@ -92,7 +87,7 @@ export class LLMListener {
     if (message.author.id === botId) return message.content;
     const withoutBot = message.content.replace(
       new RegExp(`<@!?${botId}>`, 'g'),
-      '',
+      '@Chirpy',
     );
     return cleanContent(withoutBot, message.channel).trim();
   }

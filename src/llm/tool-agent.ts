@@ -23,6 +23,8 @@ export interface Tool<Schema extends z.ZodObject = z.ZodObject> {
   name: string;
   description: string;
   toolLevel: ToolLevel;
+  /** Whether the tool should be avilable at higher levels too. True by default */
+  inheritLevel?: boolean;
   /** Arguments object; validates model input and is advertised as JSON Schema */
   schema: Schema;
   prepareSchema?: (schema: Schema, toolLevel: ToolLevel) => z.ZodObject;
@@ -99,9 +101,10 @@ export class ToolAgent {
 
     const levels = Object.values(ToolLevel);
     for (const level of levels) {
-      const filtered = tools.filter(
-        (t) => levels.indexOf(t.toolLevel) <= levels.indexOf(level),
-      );
+      const filtered = tools.filter((t) => {
+        if (t.inheritLevel ?? true) return t.toolLevel === level;
+        return levels.indexOf(t.toolLevel) <= levels.indexOf(level);
+      });
       this.#tools.set(level, new Map(filtered.map(toEntry)));
       this.#definitions.set(
         level,

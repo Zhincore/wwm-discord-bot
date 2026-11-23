@@ -114,7 +114,7 @@ export class LLMService {
       );
   }
 
-  enable(guildId: Snowflake, level: ToolLevel, roleId?: Snowflake) {
+  enable(guildId: Snowflake, level: ToolLevel, roleId: Snowflake) {
     return !!this.#addWhitelist.run({ guildId, level, roleId }).lastInsertRowid;
   }
   disable(guildId: Snowflake, level?: ToolLevel) {
