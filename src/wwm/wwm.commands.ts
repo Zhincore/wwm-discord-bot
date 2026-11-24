@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InteractionContextType } from 'discord.js';
 import {
   Context,
   Options,
@@ -13,25 +14,11 @@ import { WwmService } from './wwm.service';
 @SlashCommand({
   name: 'wwm',
   description: 'See or link WWM game stats.',
+  contexts: [InteractionContextType.Guild],
 })
 @Injectable()
 export class WwmCommands {
   constructor(private readonly service: WwmService) {}
-
-  @Subcommand({
-    name: 'player',
-    description: 'See player profile',
-  })
-  public async player(
-    @Context() [interaction]: SlashCommandContext,
-    @Options() { who }: PlayerDto,
-  ) {
-    const player = await this.service.fetchPlayer(who);
-    return interaction.reply({
-      flags: ['Ephemeral'],
-      content: '```json\n' + JSON.stringify(player) + '\n```',
-    });
-  }
 
   @Subcommand({
     name: 'guild',

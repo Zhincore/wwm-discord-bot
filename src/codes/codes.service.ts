@@ -12,6 +12,8 @@ import { fetchYarCodes } from './sources/yar.js';
 export class CodesService {
   private readonly logger = new Logger(CodesService.name);
 
+  #fetching?: Promise<string[]>;
+
   #iterateGuilds;
   #getGuild;
   #enableCodes;
@@ -45,7 +47,16 @@ export class CodesService {
       .prepare();
   }
 
-  public async fetchCodes(): Promise<string[]> {
+  public async fetchCodes() {
+    if (!this.#fetching) {
+      this.#fetching = this.#fetchCodes().finally(() => {
+        this.#fetching = undefined;
+      });
+    }
+    return await this.#fetching;
+  }
+
+  async #fetchCodes(): Promise<string[]> {
     this.logger.debug('Fetching codes...');
     const lastCursor = this.store.get('lastCursor');
 
@@ -72,16 +83,10 @@ export class CodesService {
     channel: Snowflake,
     role?: Snowflake,
   ) {
-    this.#enableCodes
-      .execute({
-        guildId,
-        channel,
-        role,
-      })
-      .sync();
+    this.#enableCodes.run({ guildId, channel, role });
   }
 
   public disableNotifications(guildId: Snowflake) {
-    this.#disableCodes.execute({ guildId }).sync();
+    this.#disableCodes.run({ guildId });
   }
 }

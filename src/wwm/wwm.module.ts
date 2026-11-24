@@ -7,7 +7,7 @@ import { WwmService } from './wwm.service.js';
 
 @Module({
   imports: [GameDataModule],
-  providers: [WwmService /*, WwmCommands*/],
+  providers: [WwmService /* , WwmCommands*/],
   exports: [WwmService],
 })
 export class WwmModule {}

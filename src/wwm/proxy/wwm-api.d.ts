@@ -627,7 +627,13 @@ export interface PlayerCardScene {
   outfit?: Outfit;
   pets: { id: number }[];
   /** players the owner placed in this scene */
-  players: { pid: string; uid?: string; name?: string; pose?: { id: number; name?: string }; outfit?: Outfit }[];
+  players: {
+    pid: string;
+    uid?: string;
+    name?: string;
+    pose?: { id: number; name?: string };
+    outfit?: Outfit;
+  }[];
 }
 
 /** Optional groups of `GET /player/{who}` (`?include=guild,pvp,build`). */

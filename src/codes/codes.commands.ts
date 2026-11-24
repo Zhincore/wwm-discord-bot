@@ -36,6 +36,7 @@ export class CodesCommands {
 
     return `New codes notifications will be sent to ${channelName} with ${roleName} role pinged.`;
   }
+
   @Subcommand({
     name: 'enable',
     description: 'Enable or change exchange codes notifications',

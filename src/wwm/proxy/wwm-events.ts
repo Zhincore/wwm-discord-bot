@@ -5,6 +5,7 @@ import { events, EventStreamError } from '#common/events.js';
 import type { BridgeEvent } from './wwm-api';
 
 export type WwmEventName = BridgeEvent['ev'];
+type All = {} & WwmEventName;
 export type WwmEventOf<E extends WwmEventName> = Extract<
   BridgeEvent,
   { ev: E }
@@ -13,18 +14,23 @@ export type WwmEventListener<E extends WwmEventName> = (
   event: WwmEventOf<E>,
 ) => unknown;
 /** Server-side filter: event field -> accepted values */
-export type WwmEventFilter = Record<string, readonly string[]>;
+export interface WwmEventFilter<E extends WwmEventName = All> {
+  ev?: readonly E[];
+  [x: string]: readonly string[] | undefined;
+}
 
-type AnyListener = WwmEventListener<WwmEventName>;
+type L<E extends WwmEventName> = WwmEventListener<E>;
+
 type EventLogger = Pick<Console, 'debug' | 'warn' | 'error'>;
 
 const BASE_DELAY = 1_000;
 const MAX_DELAY = 30_000;
 
 /** Keeps the `GET /events` stream open and dispatches events to typed listeners. */
-export class WwmEvents {
+export class WwmEvents<EnabledEvents extends WwmEventName = All> {
   readonly #query = new URLSearchParams();
-  readonly #listeners = new Map<WwmEventName, Set<AnyListener>>();
+  readonly #listeners = new Map<WwmEventName, Set<L<EnabledEvents>>>();
+  readonly #anyListeners = new Set<L<EnabledEvents>>();
   #abort?: AbortController;
   #running?: Promise<void>;
   #lastId?: string;
@@ -33,12 +39,13 @@ export class WwmEvents {
     private readonly baseUrl: string,
     private readonly token?: string,
     private readonly logger: EventLogger = console,
-    filter: WwmEventFilter = {},
+    filter: WwmEventFilter<EnabledEvents> = {},
   ) {
     if (this.#abort) return;
     this.#query = new URLSearchParams();
     for (const [field, values] of Object.entries(filter)) {
-      this.#query.set(field, values.join(','));
+      if (!values) continue;
+      this.#query.set(field as string, values.join(','));
     }
   }
 
@@ -59,14 +66,23 @@ export class WwmEvents {
   }
 
   /** Subscribe to one event type; returns the unsubscribe function. */
-  on<E extends WwmEventName>(ev: E, listener: WwmEventListener<E>): () => void {
-    let listeners = this.#listeners.get(ev);
+  on<E extends EnabledEvents>(
+    ev: E,
+    listener: WwmEventListener<E>,
+  ): () => void {
+    let listeners = this.#listeners.get(ev) as Set<L<E>> | undefined;
     if (!listeners) {
       listeners = new Set();
-      this.#listeners.set(ev, listeners);
+      this.#listeners.set(ev, listeners as any);
     }
-    listeners.add(listener as unknown as AnyListener);
-    return () => listeners.delete(listener as unknown as AnyListener);
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  }
+
+  /** Subscribe to all event types; returns the unsubscribe function. */
+  onAny(listener: L<EnabledEvents>): () => void {
+    this.#anyListeners.add(listener);
+    return () => this.#anyListeners.delete(listener);
   }
 
   /** Consume the stream, reconnecting with backoff and resuming after the last seen event. */
@@ -107,9 +123,14 @@ export class WwmEvents {
 
   /** Listener failures, sync or async, are logged and never break the stream. */
   #dispatch(event: BridgeEvent) {
-    for (const listener of this.#listeners.get(event.ev) ?? []) {
+    const listeners = [
+      ...(this.#listeners.get(event.ev) ?? []),
+      ...this.#anyListeners,
+    ];
+
+    for (const listener of listeners) {
       Promise.resolve()
-        .then(() => listener(event))
+        .then(() => listener(event as WwmEventOf<EnabledEvents>))
         .catch((error) =>
           this.logger.error(`Listener for "${event.ev}" failed`, error),
         );
