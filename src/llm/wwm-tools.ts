@@ -845,5 +845,34 @@ export function createWwmTools(wwm: WwmService): Tool[] {
         };
       },
     }),
+
+    defineTool({
+      toolLevel: 'BASIC',
+      name: 'players_nearby',
+      description:
+        'List the players standing near our in-game bot right now, closest first, with level and distance in metres. The bot normally waits at our guild base, so use this for questions like who is at the guild base. It only sees players within the game’s visibility range around it.',
+      schema: z.object({
+        radius: z
+          .number()
+          .positive()
+          .optional()
+          .describe(
+            'Only players within this many metres; omit for everyone in range.',
+          ),
+      }),
+      execute: async ({ radius }) => {
+        const nearby = await call(wwm.fetchNearby(radius), 'Nobody found.');
+        return {
+          count: nearby.count,
+          players: nearby.players.map((p) => ({
+            name: p.name,
+            uid: p.uid,
+            level: p.level,
+            distance_m: Math.round(p.distance),
+          })),
+          as_of: formatTime(Date.now() / 1000),
+        };
+      },
+    }),
   ].filter((v) => v);
 }

@@ -82,6 +82,13 @@ export class WwmService implements OnApplicationBootstrap, OnModuleDestroy {
     });
   }
 
+  /** Players around the in-game bot, closest first; `radius` in metres. */
+  public async fetchNearby(radius?: number) {
+    return await this.fetch?.('GET /nearby', {
+      query: radius ? { radius } : {},
+    });
+  }
+
   public async fetchPlayerCohort(who: string) {
     return await this.fetch?.('GET /player/{who}/cohort', {
       params: { who },

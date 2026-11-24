@@ -128,6 +128,11 @@ export interface Endpoints {
     };
     response: PlayerProfile;
   };
+  /** Players the server shows around the bot, closest first. */
+  'GET /nearby': {
+    query: { radius?: number; limit?: number };
+    response: NearbyPlayers;
+  };
   /** The player's cohort (sworn group) with its members resolved. One extra game request. */
   'GET /player/{who}/cohort': {
     query: { hostnum?: number; refresh?: boolean };
@@ -939,7 +944,46 @@ export type BridgeEventBody =
   | { ev: 'log'; line: string }
   | ChatEvent
   | GuildEvent
-  | GuildWarEvent;
+  | GuildWarEvent
+  | NearbyEvent;
+
+/** Players coming into and leaving the bot's range (checked every 5 s). */
+export type NearbyEvent =
+  /** `initial`: already there when the bot arrived in this space (first scan) */
+  | {
+      ev: 'player_appeared';
+      space: number;
+      initial: boolean;
+      pid: string;
+      uid?: string;
+      name?: string;
+      level?: number;
+      distance: number;
+    }
+  /** out of range, logged out or moved on; `stayed_s` = seconds since it appeared */
+  | {
+      ev: 'player_left';
+      space: number;
+      pid: string;
+      uid?: string;
+      name?: string;
+      stayed_s: number;
+    };
+
+/** GET /nearby */
+export interface NearbyPlayers {
+  /** the bot's current space (map) number */
+  space: number;
+  count: number;
+  /** closest first; distance in metres */
+  players: {
+    pid: string;
+    uid?: string;
+    name?: string;
+    level?: number;
+    distance: number;
+  }[];
+}
 
 export interface ChatEvent {
   ev: 'chat';

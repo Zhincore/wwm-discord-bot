@@ -298,7 +298,7 @@ describe('createWwmTools', () => {
     vi.useRealTimers();
   });
 
-  it('defines the eight spec tools', () => {
+  it('defines the nine spec tools', () => {
     expect([...setup().tools.keys()]).toEqual([
       'guild_info',
       'guild_members',
@@ -308,7 +308,32 @@ describe('createWwmTools', () => {
       'find_player',
       'find_player_advanced',
       'find_guild',
+      'players_nearby',
     ]);
+  });
+
+  it('players_nearby: names, levels, rounded distances, no internal ids', async () => {
+    const fetchNearby = vi.fn(async () => ({
+      space: 10009,
+      count: 1,
+      players: [
+        {
+          pid: 'secret-pid',
+          uid: '42',
+          name: 'Kearis',
+          level: 100,
+          distance: 45.7,
+        },
+      ],
+    }));
+    const { run } = setup({ fetchNearby });
+    const result = await run('players_nearby', { radius: 50 });
+    expect(fetchNearby).toHaveBeenCalledWith(50);
+    expect(result).toMatchObject({
+      count: 1,
+      players: [{ name: 'Kearis', uid: '42', level: 100, distance_m: 46 }],
+    });
+    expect(JSON.stringify(result)).not.toMatch(/secret-pid/);
   });
 
   it('guild_info: own guild, readable as_of, no internal ids', async () => {
@@ -457,8 +482,7 @@ describe('createWwmTools', () => {
       uid: '555',
       sect: 'unknown (#3)',
       play_time_hours: 90,
-      world_level: 17,
-      mastery: 26222,
+      mastery: `${(26222).toLocaleString()} (${(2.62224).toLocaleString()} goose)`,
       achievements: 86,
       appearance: {
         fashion_score: 1832,
