@@ -24,6 +24,7 @@ function stubClient(...outputs: object[][]) {
 }
 
 const add = defineTool({
+  toolLevel: 'BASIC',
   name: 'add',
   description: 'add',
   schema: z.object({ a: z.number(), b: z.number() }),
@@ -33,7 +34,7 @@ const add = defineTool({
 describe('ToolAgent', () => {
   it('sends history before the prompt and returns only the final text', async () => {
     const { llm, requests } = stubClient([message('second answer')]);
-    const agent = new ToolAgent(llm, { model: 'm', tools: [add] });
+    const agent = new ToolAgent(llm, { model: 'm' }, [add]);
     const history = [
       { role: 'system' as const, content: 'speaker: Ann' },
       { role: 'user' as const, content: 'first' },
@@ -66,7 +67,7 @@ describe('ToolAgent', () => {
       ],
       [message('three')],
     );
-    const agent = new ToolAgent(llm, { model: 'm', tools: [add] });
+    const agent = new ToolAgent(llm, { model: 'm' }, [add]);
     expect(await agent.run('1+2?')).toBe('three');
     const outputs = requests[1].input.filter(
       (i: any) => i.type === 'function_call_output',
@@ -83,11 +84,7 @@ describe('ToolAgent', () => {
       arguments: '{"a":1,"b":2}',
     };
     const { llm, requests } = stubClient([call], [call]);
-    const agent = new ToolAgent(llm, {
-      model: 'm',
-      tools: [add],
-      maxIterations: 2,
-    });
+    const agent = new ToolAgent(llm, { model: 'm', maxIterations: 2 }, [add]);
     await expect(agent.run('loop')).rejects.toThrow(
       'No final answer after 2 iterations',
     );
