@@ -40,6 +40,10 @@ const WEEKDAYS = [
 const plainName = (name = '') =>
   name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
+const mastery = (num: number) =>
+  Math.round(num).toLocaleString(undefined, { maximumFractionDigits: 0 }) +
+  ` (${(num / 10_000).toLocaleString()} goose)`;
+
 /** Guild log categories as the API numbers them */
 const LOG_KINDS = {
   members: 1,
@@ -649,26 +653,10 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           character_created: profile.created_ts
             ? formatTime(profile.created_ts)
             : undefined,
-          world_level: profile.world_level,
-          mastery: profile.mastery ? Math.round(profile.mastery) : undefined,
+          mastery: profile.mastery ? mastery(profile.mastery) : undefined,
           achievements: profile.achievements
             ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
             : undefined,
-          guild: profile.guild && {
-            name: profile.guild.name ?? 'not in a guild',
-            id: profile.guild.id,
-            weekly_contribution: profile.guild.week_fund,
-            total_contribution: profile.guild.fund,
-            guild_war_season: profile.guildwar?.season,
-            guild_war_league_joins: profile.guildwar?.league_joins,
-            guild_war_matchmaking_joins: profile.guildwar?.matchmaking_joins,
-          },
-          pvp: profile.pvp && {
-            grade: profile.pvp.grade,
-            sub_grade: profile.pvp.small_grade,
-            matches: profile.pvp.matches,
-            best_streak: profile.pvp.best_streak,
-          },
           as_of: formatTime(profile.fetched),
         };
       },
@@ -755,8 +743,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           character_created: profile.created_ts
             ? formatTime(profile.created_ts)
             : undefined,
-          world_level: profile.world_level,
-          mastery: profile.mastery ? Math.round(profile.mastery) : undefined,
+          mastery: profile.mastery ? mastery(profile.mastery) : undefined,
           achievements: profile.achievements
             ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
             : undefined,
