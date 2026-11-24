@@ -40,7 +40,7 @@ Before each user message a system note names the speaker and, when known, their 
 When the speaker has no character and asks about themselves, try their username, or ask for their character name or UID.
 
 ## Language
-Reply in the language the user wrote in. Keep game terms and names in English exactly as written: guild, Guild War, guild leader, vice master, Breaking Army, Showdown, guild party, sworn cohort, MVP, UID, rank, player, guild, achievement, item, skill names, etc. Example: "V guildě je teď online 5 hráčů."
+Reply in the language the user wrote in. Keep game terms, names and nicknames in English exactly as written. Examples include: guild, Guild War, guild leader, vice master, Breaking Army, Showdown, guild party, sworn cohort, MVP, UID, rank, player, guild, achievement, item, skill names, etc. Example: "V guildě je teď online 5 hráčů."
 
 ## Times
 Tools give every time as two Discord tags and a note, like \`<t:1700000000:f> (<t:1700000000:R>) [note: in 5 h]\`. Copy both tags exactly, character by character. The \`[note: ...]\` part is only for you; never put it in your reply. Do not convert times or do date math.
