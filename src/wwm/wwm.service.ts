@@ -16,22 +16,44 @@ import type {
 import {
   WwmEvents,
   type WwmEventListener,
-  type WwmEventName,
+  type WwmEventName as AllWwmEventName,
 } from './proxy/wwm-events';
 import { WwmProxy } from './proxy/wwm-proxy';
 
 const WWM_API = process.env['WWM_API']?.trim() || '';
 const WWM_API_TOKEN = process.env['WWM_API_TOKEN']?.trim() || '';
 
+const EVENTS = [
+  'bridge_connected',
+  'bridge_disconnected',
+  'chat',
+  'guild_log',
+  'guild_event_soon',
+  'guild_event_start',
+  'guildwar_opponent',
+  'guildwar_match',
+  'guild_member_joined',
+  'guild_member_left',
+] satisfies [AllWwmEventName, ...AllWwmEventName[]];
+
+export type WwmEventName = (typeof EVENTS)[number];
+
 @Injectable()
 export class WwmService implements OnApplicationBootstrap, OnModuleDestroy {
   readonly #logger = new Logger(WwmService.name);
   readonly #wwm = new WwmProxy(WWM_API, WWM_API_TOKEN);
-  readonly #events = new WwmEvents(WWM_API, WWM_API_TOKEN, this.#logger);
+  readonly #events = new WwmEvents<WwmEventName>(
+    WWM_API,
+    WWM_API_TOKEN,
+    this.#logger,
+    {
+      ev: EVENTS,
+      channel: ['club_chat'],
+    },
+  );
 
   onApplicationBootstrap() {
     if (WWM_API) this.#events.start();
-    else this.#logger.warn('WWM_API not specified, disabled.');
   }
 
   onModuleDestroy() {
@@ -41,6 +63,9 @@ export class WwmService implements OnApplicationBootstrap, OnModuleDestroy {
   /** Subscribe to one game event type; returns the unsubscribe function. */
   on<E extends WwmEventName>(ev: E, listener: WwmEventListener<E>) {
     return this.#events.on(ev, listener);
+  }
+  onAny(listener: WwmEventListener<WwmEventName>) {
+    return this.#events.onAny(listener);
   }
 
   /** Call a REST endpoint of the game API. */
@@ -54,6 +79,13 @@ export class WwmService implements OnApplicationBootstrap, OnModuleDestroy {
     return await this.fetch?.('GET /player/{who}', {
       params: { who },
       query: include.length ? { include: include.join() } : {},
+    });
+  }
+
+  /** Players around the in-game bot, closest first; `radius` in metres. */
+  public async fetchNearby(radius?: number) {
+    return await this.fetch?.('GET /nearby', {
+      query: radius ? { radius } : {},
     });
   }
 

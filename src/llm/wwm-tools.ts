@@ -8,6 +8,7 @@ import type {
   GuildWarMatch,
   Named,
   NoGuild,
+  Outfit,
   PlayerInclude,
   PlayerLoadout,
   RelatedPlayer,
@@ -38,6 +39,10 @@ const WEEKDAYS = [
 /** Letters and digits only, lowercased: "CZ-Lamy" and "cz lamy" compare equal. */
 const plainName = (name = '') =>
   name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+const mastery = (num: number) =>
+  Math.round(num).toLocaleString(undefined, { maximumFractionDigits: 0 }) +
+  ` (${(num / 10_000).toLocaleString()} goose)`;
 
 /** Guild log categories as the API numbers them */
 const LOG_KINDS = {
@@ -148,6 +153,21 @@ function localTimes(text: string, entryTs: number) {
       return wrap(`<t:${ts}:f>`);
     },
   );
+}
+
+/** Outfit as "Category: Piece" names, the complete sets and the saved preset's picture. */
+function shapeOutfit(outfit: Outfit | undefined) {
+  if (!outfit) return undefined;
+  return {
+    pieces: outfit.pieces.map((p) => {
+      const name = p.name ?? `#${p.id}`;
+      return p.category ? `${p.category}: ${name}` : name;
+    }),
+    complete_sets: outfit.sets.length
+      ? outfit.sets.map((set) => set.name ?? `#${set.id}`)
+      : undefined,
+    picture: outfit.image || undefined,
+  };
 }
 
 function shapeRelated(player: RelatedPlayer) {
@@ -633,26 +653,10 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           character_created: profile.created_ts
             ? formatTime(profile.created_ts)
             : undefined,
-          world_level: profile.world_level,
-          mastery: profile.mastery ? Math.round(profile.mastery) : undefined,
+          mastery: profile.mastery ? mastery(profile.mastery) : undefined,
           achievements: profile.achievements
             ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
             : undefined,
-          guild: profile.guild && {
-            name: profile.guild.name ?? 'not in a guild',
-            id: profile.guild.id,
-            weekly_contribution: profile.guild.week_fund,
-            total_contribution: profile.guild.fund,
-            guild_war_season: profile.guildwar?.season,
-            guild_war_league_joins: profile.guildwar?.league_joins,
-            guild_war_matchmaking_joins: profile.guildwar?.matchmaking_joins,
-          },
-          pvp: profile.pvp && {
-            grade: profile.pvp.grade,
-            sub_grade: profile.pvp.small_grade,
-            matches: profile.pvp.matches,
-            best_streak: profile.pvp.best_streak,
-          },
           as_of: formatTime(profile.fetched),
         };
       },
@@ -661,7 +665,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
       toolLevel: 'ADVANCED',
       name: 'find_player_advanced',
       description:
-        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, scene for the other players standing in the scene on their player card, cohort for their sworn cohort members.',
+        'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, outfit for the clothes they are wearing right now, scene for the scenes on their player card (each with its background, their pose and outfit there, and the players standing in it with their pose and outfit), cohort for their sworn cohort members.',
       schema: z.object({
         player: z
           .string()
@@ -676,6 +680,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
               'build',
               'gear',
               'appearance',
+              'outfit',
               'scene',
               'cohort',
             ]),
@@ -738,8 +743,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
           character_created: profile.created_ts
             ? formatTime(profile.created_ts)
             : undefined,
-          world_level: profile.world_level,
-          mastery: profile.mastery ? Math.round(profile.mastery) : undefined,
+          mastery: profile.mastery ? mastery(profile.mastery) : undefined,
           achievements: profile.achievements
             ? Object.values(profile.achievements).reduce((a, b) => a + b, 0)
             : undefined,
@@ -784,10 +788,20 @@ export function createWwmTools(wwm: WwmService): Tool[] {
               (set) => set.name ?? `#${set.id}`,
             ),
           },
+          outfit: shapeOutfit(profile.outfit),
           scene: profile.scene && {
-            players: profile.scene.players.map((p) => ({
-              ...shapeRelated(p),
-              pose: p.pose?.name,
+            players: profile.scene.players.map(shapeRelated),
+            scenes: profile.scene.scenes.map((s) => ({
+              background: s.background?.name,
+              pose: s.pose?.name,
+              outfit: shapeOutfit(s.outfit),
+              pets: s.pets.length || undefined,
+              players: s.players.map((p) => ({
+                name: p.name,
+                uid: p.uid,
+                pose: p.pose?.name,
+                outfit: shapeOutfit(p.outfit),
+              })),
             })),
           },
           cohort:
@@ -827,6 +841,35 @@ export function createWwmTools(wwm: WwmService): Tool[] {
         return {
           shown: Math.min(results.length, MAX_GUILDS),
           guilds: results.slice(0, MAX_GUILDS).map(shapeGuildResult),
+          as_of: formatTime(Date.now() / 1000),
+        };
+      },
+    }),
+
+    defineTool({
+      toolLevel: 'BASIC',
+      name: 'players_nearby',
+      description:
+        'List the players standing near our in-game bot right now, closest first, with level and distance in metres. The bot normally waits at our guild base, so use this for questions like who is at the guild base. It only sees players within the game’s visibility range around it.',
+      schema: z.object({
+        radius: z
+          .number()
+          .positive()
+          .optional()
+          .describe(
+            'Only players within this many metres; omit for everyone in range.',
+          ),
+      }),
+      execute: async ({ radius }) => {
+        const nearby = await call(wwm.fetchNearby(radius), 'Nobody found.');
+        return {
+          count: nearby.count,
+          players: nearby.players.map((p) => ({
+            name: p.name,
+            uid: p.uid,
+            level: p.level,
+            distance_m: Math.round(p.distance),
+          })),
           as_of: formatTime(Date.now() / 1000),
         };
       },

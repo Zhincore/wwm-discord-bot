@@ -173,6 +173,13 @@ function setup(overrides: Partial<Record<keyof WwmService, unknown>> = {}) {
         sets: [{ id: 2, name: 'Heavenly Frost' }, { id: 9 }],
         items: [{ id: 603001, name: 'Hairstyle 1' }],
       },
+      outfit: {
+        pieces: [
+          { id: 603001, name: 'Hairstyle 1', category: 'Hairstyle' },
+          { id: 606001 },
+        ],
+        sets: [],
+      },
       scene: {
         players: [
           {
@@ -183,6 +190,35 @@ function setup(overrides: Partial<Record<keyof WwmService, unknown>> = {}) {
             level: 100,
             online: true,
             pose: { id: 2901042, name: 'Wish' },
+          },
+        ],
+        scenes: [
+          {
+            index: 2,
+            background: { id: 2904005, name: 'Mist' },
+            pose: { id: 2901005, name: 'Politely Decline' },
+            outfit: {
+              pieces: [
+                {
+                  id: 618179,
+                  name: 'Strokes of Grace',
+                  category: 'Hair Ornament',
+                },
+              ],
+              sets: [{ id: 5, name: 'Ink and Blade' }],
+              preset: 1,
+              image: 'https://example.test/preset.png',
+            },
+            pets: [{ id: 2910002 }],
+            players: [
+              {
+                pid: 'secret-friend',
+                uid: '777',
+                name: 'Friend',
+                pose: { id: 2901042, name: 'Wish' },
+                outfit: { pieces: [], sets: [], preset: 0 },
+              },
+            ],
           },
         ],
       },
@@ -262,7 +298,7 @@ describe('createWwmTools', () => {
     vi.useRealTimers();
   });
 
-  it('defines the seven spec tools', () => {
+  it('defines the nine spec tools', () => {
     expect([...setup().tools.keys()]).toEqual([
       'guild_info',
       'guild_members',
@@ -270,8 +306,34 @@ describe('createWwmTools', () => {
       'guild_log',
       'guild_war',
       'find_player',
+      'find_player_advanced',
       'find_guild',
+      'players_nearby',
     ]);
+  });
+
+  it('players_nearby: names, levels, rounded distances, no internal ids', async () => {
+    const fetchNearby = vi.fn(async () => ({
+      space: 10009,
+      count: 1,
+      players: [
+        {
+          pid: 'secret-pid',
+          uid: '42',
+          name: 'Kearis',
+          level: 100,
+          distance: 45.7,
+        },
+      ],
+    }));
+    const { run } = setup({ fetchNearby });
+    const result = await run('players_nearby', { radius: 50 });
+    expect(fetchNearby).toHaveBeenCalledWith(50);
+    expect(result).toMatchObject({
+      count: 1,
+      players: [{ name: 'Kearis', uid: '42', level: 100, distance_m: 46 }],
+    });
+    expect(JSON.stringify(result)).not.toMatch(/secret-pid/);
   });
 
   it('guild_info: own guild, readable as_of, no internal ids', async () => {
@@ -402,15 +464,16 @@ describe('createWwmTools', () => {
     );
   });
 
-  it('find_player: splits include, shapes build, hides linked accounts', async () => {
+  it('find_player_advanced: splits include, shapes build, hides linked accounts', async () => {
     const { run, wwm } = setup();
-    const result = await run('find_player', {
+    const result = await run('find_player_advanced', {
       player: ' Brasshop ',
-      include: ['build', 'gear', 'appearance', 'scene', 'cohort'],
+      include: ['build', 'gear', 'appearance', 'outfit', 'scene', 'cohort'],
     });
     expect(wwm.fetchPlayer).toHaveBeenCalledWith('Brasshop', [
       'build',
       'appearance',
+      'outfit',
       'scene',
     ]);
     expect(wwm.fetchPlayerCohort).toHaveBeenCalledWith('Brasshop');
@@ -419,8 +482,7 @@ describe('createWwmTools', () => {
       uid: '555',
       sect: 'unknown (#3)',
       play_time_hours: 90,
-      world_level: 17,
-      mastery: 26222,
+      mastery: `${(26222).toLocaleString()} (${(2.62224).toLocaleString()} goose)`,
       achievements: 86,
       appearance: {
         fashion_score: 1832,
@@ -428,14 +490,27 @@ describe('createWwmTools', () => {
         pieces_by_category: { Outfit: 2, Hat: 1 },
         complete_sets: ['Heavenly Frost', '#9'],
       },
+      outfit: { pieces: ['Hairstyle: Hairstyle 1', '#606001'] },
       scene: {
-        players: [
+        players: [{ name: 'Friend', uid: '777', level: 100, status: 'online' }],
+        scenes: [
           {
-            name: 'Friend',
-            uid: '777',
-            level: 100,
-            status: 'online',
-            pose: 'Wish',
+            background: 'Mist',
+            pose: 'Politely Decline',
+            outfit: {
+              pieces: ['Hair Ornament: Strokes of Grace'],
+              complete_sets: ['Ink and Blade'],
+              picture: 'https://example.test/preset.png',
+            },
+            pets: 1,
+            players: [
+              {
+                name: 'Friend',
+                uid: '777',
+                pose: 'Wish',
+                outfit: { pieces: [] },
+              },
+            ],
           },
         ],
       },
@@ -464,8 +539,12 @@ describe('createWwmTools', () => {
       },
     });
     expect(
-      (await run('find_player', { player: 'Brasshop', include: ['build'] }))
-        .gear,
+      (
+        await run('find_player_advanced', {
+          player: 'Brasshop',
+          include: ['build'],
+        })
+      ).gear,
     ).toBeUndefined();
     const text = JSON.stringify(result);
     expect(text).not.toMatch(
@@ -480,7 +559,7 @@ describe('createWwmTools', () => {
     });
     const { run } = setup({ fetchPlayer });
     const one = await run('find_player', { player: 'player 7' });
-    expect(fetchPlayer).toHaveBeenLastCalledWith('7', []);
+    expect(fetchPlayer).toHaveBeenLastCalledWith('7');
     expect(one.name).toBe('Player7');
     const several = await run('find_player', { player: 'layer2' });
     expect(several.note).toMatch(/which one/);

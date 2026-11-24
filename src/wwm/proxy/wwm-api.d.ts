@@ -1,7 +1,4 @@
 /**
- * Type definitions for the dockerized-wwm HTTP API (default http://localhost:8000):
- * request/response calls plus one server-sent event stream (`GET /events`).
- *
  * Conventions
  * - All timestamps are Unix seconds (some carry fractions). Players carry two ids: `uid`, the numeric
  *   player ID shown in game, and `pid`, the game's internal id (16 chars, may contain `/` and `+` ->
@@ -49,7 +46,6 @@ export interface Endpoints {
     response: Ok;
   };
 
-  /** Run a command of the in-game Lua loader. `timeout: 0` returns `{ id }` without waiting. */
   /**
    * DEV ONLY (server started with WWM_DEV=1; 403 otherwise): run any command of the game scripts.
    * For a specific request `R` the response is `CommandResultOf<R>` (or `{ id }` with `timeout: 0`).
@@ -65,7 +61,8 @@ export interface Endpoints {
    * - replay: `since=<seq>`, or the `Last-Event-ID` header on reconnect, first sends buffered events
    *   after that number (the 500 newest per event name are kept)
    * - filter: any other query parameter restricts on an event field with a comma-separated list of
-   *   accepted values, e.g. `/events?ev=chat&channel=world,club_chat`
+   *   accepted values, e.g. `/events?ev=chat&channel=world,club_chat`. A filter only applies to events
+   *   that have that field: `/events?ev=chat,log&channel=world` gives world chat and every log line.
    * Command results are never sent on the stream. `token` = the API token, for clients that cannot
    * send the Authorization header.
    */
@@ -131,6 +128,11 @@ export interface Endpoints {
     };
     response: PlayerProfile;
   };
+  /** Players the server shows around the bot, closest first. */
+  'GET /nearby': {
+    query: { radius?: number; limit?: number };
+    response: NearbyPlayers;
+  };
   /** The player's cohort (sworn group) with its members resolved. One extra game request. */
   'GET /player/{who}/cohort': {
     query: { hostnum?: number; refresh?: boolean };
@@ -159,8 +161,11 @@ export interface Status {
   display: string | null;
   /** "<width> <height>" */
   screen: string;
-  /** true while the in-game Lua loader is connected */
   bridge: boolean;
+  /** WWM_OFFLINE_HOURS, "HH:MM-HH:MM", or null when not set */
+  offline_hours: string | null;
+  /** true while inside the offline hours (the game is logged out) */
+  offline: boolean;
 }
 
 export interface WindowInfo {
@@ -608,6 +613,34 @@ export interface PlayerRef {
   name?: string;
 }
 
+/** Worn outfit pieces and the sets worn complete. */
+export interface Outfit {
+  pieces: { id: number; name?: string; category?: string }[];
+  sets: { id: number; name?: string }[];
+  /** saved outfit preset the scene uses; 0 = the outfit worn right now */
+  preset?: number;
+  /** picture of the saved preset */
+  image?: string;
+}
+
+/** One scene of the player card carousel. */
+export interface PlayerCardScene {
+  index: number;
+  background?: { id: number; name?: string };
+  pose?: { id: number; name?: string };
+  /** what the owner wears in this scene */
+  outfit?: Outfit;
+  pets: { id: number }[];
+  /** players the owner placed in this scene */
+  players: {
+    pid: string;
+    uid?: string;
+    name?: string;
+    pose?: { id: number; name?: string };
+    outfit?: Outfit;
+  }[];
+}
+
 /** Optional groups of `GET /player/{who}` (`?include=guild,pvp,build`). */
 export type PlayerInclude =
   /** `guild` + `guildwar`: contribution and Guild War join counts */
@@ -616,8 +649,10 @@ export type PlayerInclude =
   | 'pvp'
   /** `appearance`: owned outfit pieces, complete sets, fashion score */
   | 'appearance'
-  /** `scene`: other players standing in the scene of the player card */
+  /** `scene`: the player card carousel (background, pose, outfit, players standing there) */
   | 'scene'
+  /** `outfit`: the outfit worn right now */
+  | 'outfit'
   /** `loadout` (names resolved) + raw `build` / `equips`: skills and worn equipment; costs one more game request */
   | 'build';
 
@@ -846,11 +881,15 @@ export interface PlayerProfile {
     matches?: number;
     best_streak?: number;
   };
-  /** include=scene: the players the owner placed in the scene of their player card, each with the
-   *  pose they were given; absent when the scene was not returned */
+  /** include=scene: the player card carousel; absent when the scenes were not returned */
   scene?: {
+    /** everyone standing in any scene, once, with the pose of their first scene */
     players: (RelatedPlayer & { pose?: { id: number; name?: string } })[];
+    /** each carousel scene, by index */
+    scenes: PlayerCardScene[];
   };
+  /** include=outfit: the outfit worn right now */
+  outfit?: Outfit;
   /** include=appearance: what the player owns in the wardrobe */
   appearance?: {
     fashion_score?: number;
@@ -890,19 +929,61 @@ export type BridgeEventBody =
     }
   | { ev: 'bad_line'; raw: string }
   | { ev: 'handler_error'; for: string; error: string }
-  /** Lua asked for an OS-level click; with `window` the coordinates are relative to that X window */
   | { ev: 'os_click'; x: number; y: number; window?: string }
   | { ev: 'os_clicked'; x: number; y: number; window?: string }
   | { ev: 'os_click_skipped'; window: string }
   | { ev: 'autologin'; phase: 'authed' }
   | { ev: 'autologin'; phase: 'confirm'; tag: string }
   | { ev: 'autologin'; phase: 'failed'; reason: string }
+  /** offline hours began: logged out (`logout` = was in the world) and stays at the login screen */
+  | { ev: 'autologin'; phase: 'offline'; logout: boolean }
+  /** offline hours ended: logging in again */
+  | { ev: 'autologin'; phase: 'online' }
   | { ev: 'perf'; ui_only: boolean; fps: number }
   /** a log line of the game scripts (also printed to the container log) */
   | { ev: 'log'; line: string }
   | ChatEvent
   | GuildEvent
-  | GuildWarEvent;
+  | GuildWarEvent
+  | NearbyEvent;
+
+/** Players coming into and leaving the bot's range (checked every 5 s). */
+export type NearbyEvent =
+  /** `initial`: already there when the bot arrived in this space (first scan) */
+  | {
+      ev: 'player_appeared';
+      space: number;
+      initial: boolean;
+      pid: string;
+      uid?: string;
+      name?: string;
+      level?: number;
+      distance: number;
+    }
+  /** out of range, logged out or moved on; `stayed_s` = seconds since it appeared */
+  | {
+      ev: 'player_left';
+      space: number;
+      pid: string;
+      uid?: string;
+      name?: string;
+      stayed_s: number;
+    };
+
+/** GET /nearby */
+export interface NearbyPlayers {
+  /** the bot's current space (map) number */
+  space: number;
+  count: number;
+  /** closest first; distance in metres */
+  players: {
+    pid: string;
+    uid?: string;
+    name?: string;
+    level?: number;
+    distance: number;
+  }[];
+}
 
 export interface ChatEvent {
   ev: 'chat';

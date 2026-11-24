@@ -15,6 +15,13 @@ type DeepMerge<T, U> = [T, U] extends [Record<string, any>, Record<string, any>]
 const isObject = (item: unknown): item is Record<string, any> =>
   Boolean(item && typeof item === 'object' && !Array.isArray(item));
 
+export function arrayToChoices<A extends readonly string[]>(array: A) {
+  return array.map((t) => ({
+    value: t,
+    name: t.toLowerCase() as Lowercase<typeof t>,
+  })) as { -readonly [I in keyof A]: { value: A[I]; name: Lowercase<A[I]> } };
+}
+
 export function deepMerge<
   T extends Record<string, any>,
   U extends Record<string, any>,
@@ -71,4 +78,8 @@ export async function onceReady(client: Client) {
       resolve(c);
     });
   });
+}
+
+export function cap<T extends string>(str: T): Capitalize<T> {
+  return (str.slice(0, 1) + str.slice(1)) as Capitalize<T>;
 }

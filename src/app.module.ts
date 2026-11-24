@@ -32,7 +32,7 @@ const devGuild = process.env['DISCORD_DEVELOPMENT_GUILD_ID']?.trim();
     CodesModule,
     // GameProfileModule,
     WwmModule,
-    LLMModule,
+    ...(process.env['OPENROUTER_API_KEY'] ? [LLMModule] : []),
   ],
   controllers: [AppController],
   providers: [AppService],
