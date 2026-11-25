@@ -61,4 +61,28 @@ export class NotificationsCommands {
       content: `Notifications for \`${kind}\` **${changed ? 'have been disabled' : "weren't enabled before."}** .`,
     });
   }
+
+  // @Subcommand({
+  //   name: 'preview',
+  //   description: 'Preview a notification of given type.',
+  // })
+  // public async preview(
+  //   @Context() [interaction]: SlashCommandContext,
+  //   @Options() { kind }: DisableNotificationsDto,
+  // ) {
+  //   if (!interaction.inGuild()) return;
+
+  //   const notifier = this.service.getNotifier(kind);
+  //   if (!notifier) return;
+
+  //   const reply = await notifier.previewEvent([interaction]);
+  //   if (!reply) {
+  //     return interaction.reply({
+  //       flags: 'Ephemeral',
+  //       content: 'Preview notification sent.',
+  //     });
+  //   }
+
+  //   return interaction.reply(reply as InteractionReplyOptions);
+  // }
 }

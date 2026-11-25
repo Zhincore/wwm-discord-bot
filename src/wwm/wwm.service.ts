@@ -29,11 +29,13 @@ const EVENTS = [
   'chat',
   'guild_log',
   'guild_event_soon',
-  'guild_event_start',
+  'guild_play_state',
   'guildwar_opponent',
   'guildwar_match',
   'guild_member_joined',
   'guild_member_left',
+  'player_appeared',
+  'player_left',
 ] satisfies [AllWwmEventName, ...AllWwmEventName[]];
 
 export type WwmEventName = (typeof EVENTS)[number];
@@ -49,6 +51,7 @@ export class WwmService implements OnApplicationBootstrap, OnModuleDestroy {
     {
       ev: EVENTS,
       channel: ['club_chat'],
+      own_guild: ['false'],
     },
   );
 

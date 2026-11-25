@@ -4,6 +4,7 @@ import { IntentsBitField } from 'discord.js';
 import { NecordModule } from 'necord';
 
 import { LLMModule } from '#llm/llm.module.js';
+import { NotificationsModule } from '#notifications/notifications.module.js';
 
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -33,6 +34,7 @@ const devGuild = process.env['DISCORD_DEVELOPMENT_GUILD_ID']?.trim();
     // GameProfileModule,
     WwmModule,
     ...(process.env['OPENROUTER_API_KEY'] ? [LLMModule] : []),
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

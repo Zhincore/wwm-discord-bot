@@ -14,6 +14,7 @@ import type {
   RelatedPlayer,
 } from '#wwm/proxy/wwm-api.d.ts';
 import { WwmApiError } from '#wwm/proxy/wwm-proxy.ts';
+import { mastery } from '#wwm/utils.ts';
 import type { WwmService } from '#wwm/wwm.service.ts';
 
 import { formatClock, formatTime } from './utils/time-format';
@@ -39,10 +40,6 @@ const WEEKDAYS = [
 /** Letters and digits only, lowercased: "CZ-Lamy" and "cz lamy" compare equal. */
 const plainName = (name = '') =>
   name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-
-const mastery = (num: number) =>
-  Math.round(num).toLocaleString(undefined, { maximumFractionDigits: 0 }) +
-  ` (${(num / 10_000).toLocaleString()} goose)`;
 
 /** Guild log categories as the API numbers them */
 const LOG_KINDS = {
@@ -663,7 +660,7 @@ export function createWwmTools(wwm: WwmService): Tool[] {
     }),
     defineTool({
       toolLevel: 'ADVANCED',
-      name: 'find_player_advanced',
+      name: 'find_player',
       description:
         'Look up one player by name or numeric UID. Returns level, sect, whether they are online or when they were last seen, total play time in hours, when the character was created, world level, mastery (the number the game shows for how strong their build is) and how many achievements they completed. Add include only when the question asks for it: guild for which guild they are in and their contribution to it, pvp for their arena rank and record, build for their martial arts, inner ways, mystic skills and gear sets, gear for the stats of every worn item plus totals over all gear, appearance for their fashion score, how many outfit pieces they own per category and which outfit sets they completed, outfit for the clothes they are wearing right now, scene for the scenes on their player card (each with its background, their pose and outfit there, and the players standing in it with their pose and outfit), cohort for their sworn cohort members.',
       schema: z.object({

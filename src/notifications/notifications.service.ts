@@ -6,16 +6,13 @@ import { DatabaseService } from '#common/database/database.service.ts';
 import type { WwmEventName } from '#wwm/wwm.service.ts';
 
 import { notificationsTable } from './notifications.schema';
-
-export const NotificationKind = [
-  'chat',
-  'guild_member_joined',
-  'guild_member_left',
-] satisfies [WwmEventName, ...WwmEventName[]];
-export type NotificationKind = (typeof NotificationKind)[number];
+import type { NotificationKind } from './notifiers';
+import type { BaseNotificationsNotifier } from './notifiers/base';
 
 @Injectable()
 export class NotificationsService {
+  #notifiers: { [E in WwmEventName]?: BaseNotificationsNotifier<E> } = {};
+
   #iterateGuilds;
   #getGuild;
   #enableNotifications;
@@ -56,7 +53,19 @@ export class NotificationsService {
       .prepare();
   }
 
-  public getGuilds(kind: NotificationKind) {
+  public register<K extends WwmEventName>(
+    kind: K,
+    notifier: BaseNotificationsNotifier<K>,
+  ) {
+    Object.assign(this.#notifiers, { [kind]: notifier });
+  }
+  public getNotifier<K extends NotificationKind>(
+    kind: K,
+  ): BaseNotificationsNotifier<K> | undefined {
+    return this.#notifiers[kind];
+  }
+
+  public getGuilds(kind: WwmEventName) {
     return this.#iterateGuilds.all({ kind });
   }
 

@@ -63,6 +63,7 @@ export interface Endpoints {
    * - filter: any other query parameter restricts on an event field with a comma-separated list of
    *   accepted values, e.g. `/events?ev=chat&channel=world,club_chat`. A filter only applies to events
    *   that have that field: `/events?ev=chat,log&channel=world` gives world chat and every log line.
+   *   Booleans match `true` / `false`.
    * Command results are never sent on the stream. `token` = the API token, for clients that cannot
    * send the Authorization header.
    */
@@ -128,12 +129,12 @@ export interface Endpoints {
     };
     response: PlayerProfile;
   };
-  /** Players the server shows around the bot, closest first. */
+  /** The player's cohort (sworn group) with its members resolved. One extra game request. */
+  /** players the server shows around the bot, closest first */
   'GET /nearby': {
     query: { radius?: number; limit?: number };
     response: NearbyPlayers;
   };
-  /** The player's cohort (sworn group) with its members resolved. One extra game request. */
   'GET /player/{who}/cohort': {
     query: { hostnum?: number; refresh?: boolean };
     response: PlayerCohort;
@@ -362,9 +363,13 @@ export interface GuildBase {
 
 export interface GuildMember {
   pid: Pid;
+  /** the member's server number (for player lookups by pid) */
+  hostnum?: number;
   uid: Uid;
   name?: string;
   level?: number;
+  /** avatar picture for the member's body type, numbered like the official site's avatar images */
+  head_image_id?: number;
   /** localized rank names, sorted; includes custom ranks */
   roles: string[];
   join_ts?: Timestamp;
@@ -613,6 +618,7 @@ export interface PlayerRef {
   name?: string;
 }
 
+/** Optional groups of `GET /player/{who}` (`?include=guild,pvp,build`). */
 /** Worn outfit pieces and the sets worn complete. */
 export interface Outfit {
   pieces: { id: number; name?: string; category?: string }[];
@@ -641,7 +647,6 @@ export interface PlayerCardScene {
   }[];
 }
 
-/** Optional groups of `GET /player/{who}` (`?include=guild,pvp,build`). */
 export type PlayerInclude =
   /** `guild` + `guildwar`: contribution and Guild War join counts */
   | 'guild'
@@ -852,6 +857,8 @@ export interface PlayerProfile {
   };
   card: { sign?: string; banner?: Named };
   avatar?: Named;
+  /** picture of the avatar for the player's body type, numbered like the official site's avatar images */
+  avatar_image_id?: number;
   /** raw avatar data: head id, back colour, frames, transform */
   head?: GameData;
   /** the player's in-game "hide build" setting; `include=build` returns the build regardless */
@@ -949,7 +956,9 @@ export type BridgeEventBody =
 
 /** Players coming into and leaving the bot's range (checked every 5 s). */
 export type NearbyEvent =
-  /** `initial`: already there when the bot arrived in this space (first scan) */
+  /** `initial`: already there when the bot arrived in this space (first scan). Guild fields and `player` (the
+   *  default profile + guild, as GET /player/{who}?include=guild returns it) come from one lookup; absent if it failed.
+   *  `own_guild` is false for players of other guilds and without a guild; filter e.g. /events?ev=player_appeared&own_guild=false */
   | {
       ev: 'player_appeared';
       space: number;
@@ -959,8 +968,13 @@ export type NearbyEvent =
       name?: string;
       level?: number;
       distance: number;
+      guild_id?: number;
+      guild_name?: string;
+      own_guild: boolean;
+      head_image_id?: number;
+      player?: PlayerProfile;
     }
-  /** out of range, logged out or moved on; `stayed_s` = seconds since it appeared */
+  /** out of range, logged out or moved on; `stayed_s` = seconds since it appeared; guild fields as on appearing */
   | {
       ev: 'player_left';
       space: number;
@@ -968,6 +982,10 @@ export type NearbyEvent =
       uid?: string;
       name?: string;
       stayed_s: number;
+      guild_id?: number;
+      guild_name?: string;
+      own_guild?: boolean;
+      head_image_id?: number;
     };
 
 /** GET /nearby */
@@ -976,12 +994,17 @@ export interface NearbyPlayers {
   space: number;
   count: number;
   /** closest first; distance in metres */
+  /** guild fields once the player's appearance lookup is done */
   players: {
     pid: string;
     uid?: string;
     name?: string;
     level?: number;
     distance: number;
+    guild_id?: number;
+    guild_name?: string;
+    own_guild?: boolean;
+    head_image_id?: number;
   }[];
 }
 
@@ -1000,6 +1023,9 @@ export interface ChatEvent {
   sender_level?: number;
   /** avatar (portrait) id */
   head_id?: number;
+  /** picture of that avatar for the sender's body type; the official site's avatar images use these ids
+   *  (data/head/head.txt). Absent without an avatar, or when the game has no picture for it */
+  head_image_id?: number;
   /** avatar details: head, back_color, frames, head_transform, ... */
   head_data?: GameData;
   body_type?: number;
@@ -1023,6 +1049,7 @@ export type GuildEvent =
       fund?: number;
     }
   | { ev: 'guild_updated'; club: false }
+  /** `player`: the default profile, as GET /player/{who} returns it (absent if the lookup failed) */
   | {
       ev: 'guild_member_joined';
       pid: Pid;
@@ -1030,8 +1057,18 @@ export type GuildEvent =
       name?: string;
       level?: number;
       roles: string[];
+      head_image_id?: number;
+      player?: PlayerProfile;
     }
-  | { ev: 'guild_member_left'; pid: Pid; uid?: Uid; name?: string }
+  /** `player`: the default profile, looked up when they left (absent if the lookup failed) */
+  | {
+      ev: 'guild_member_left';
+      pid: Pid;
+      uid?: Uid;
+      name?: string;
+      head_image_id?: number;
+      player?: PlayerProfile;
+    }
   | {
       ev: 'guild_member_roles';
       pid: Pid;

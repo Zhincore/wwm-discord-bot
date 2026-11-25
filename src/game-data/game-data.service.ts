@@ -26,6 +26,8 @@ interface GameDataServiceEvents {
   dataUpdated: [];
 }
 
+export const DEFAULT_AVATAR = 10_000;
+
 @Injectable()
 export class GameDataService implements OnApplicationBootstrap {
   private readonly logger = new Logger(GameDataService.name);

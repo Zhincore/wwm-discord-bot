@@ -1,7 +1,8 @@
 import { StringOption } from 'necord';
 
 import { arrayToChoices } from '#common/utils.ts';
-import { NotificationKind } from '#notifications/notifications.service.ts';
+
+import { NotificationKind } from '../notifiers';
 
 export class DisableNotificationsDto {
   @StringOption({
