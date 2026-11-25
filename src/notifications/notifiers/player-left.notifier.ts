@@ -26,7 +26,9 @@ export class PlayerLeftNotifier extends BaseNotificationsNotifier<'player_left'>
   ): Promise<void> {
     if (!event.name) return;
 
-    const duration = Temporal.Duration.from({ seconds: event.stayed_s });
+    const duration = Temporal.Duration.from({ seconds: event.stayed_s }).round({
+      largestUnit: 'days',
+    });
     const embed = new EmbedBuilder()
       .setColor('DarkPurple')
       .setTitle(`${event.name}`)
